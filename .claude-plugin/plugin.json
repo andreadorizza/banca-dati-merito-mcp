@@ -1,0 +1,20 @@
+{
+  "name": "banca-dati-merito",
+  "version": "0.1.0",
+  "description": "Ricerca e lettura della giurisprudenza di merito nella Banca Dati di Merito (bdp.giustizia.it) con la propria sessione SPID, CIE o CNS. Progetto non ufficiale.",
+  "author": {
+    "name": "Andrea Dorizza",
+    "url": "https://github.com/andreadorizza"
+  },
+  "homepage": "https://github.com/andreadorizza/banca-dati-merito-mcp#readme",
+  "repository": "https://github.com/andreadorizza/banca-dati-merito-mcp",
+  "license": "Apache-2.0",
+  "keywords": ["giurisprudenza", "banca-dati-di-merito", "legal", "italia", "mcp"],
+  "skills": ["./skills/ricerca-banca-dati-merito"],
+  "mcpServers": {
+    "banca-dati-merito": {
+      "command": "npx",
+      "args": ["-y", "banca-dati-merito-mcp@0.1.0"]
+    }
+  }
+}

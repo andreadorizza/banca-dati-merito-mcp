@@ -1,0 +1,51 @@
+{
+  "name": "banca-dati-merito-mcp",
+  "version": "0.1.0",
+  "description": "Server MCP non ufficiale per la Banca Dati di Merito del Ministero della Giustizia (bdp.giustizia.it): ricerca e lettura di provvedimenti e abstract con la propria sessione CIE/SPID/CNS.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "banca-dati-di-merito",
+    "giurisprudenza",
+    "giustizia",
+    "italia",
+    "legal"
+  ],
+  "license": "Apache-2.0",
+  "author": "Andrea Dorizza",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andreadorizza/banca-dati-merito-mcp.git"
+  },
+  "homepage": "https://github.com/andreadorizza/banca-dati-merito-mcp#readme",
+  "bugs": "https://github.com/andreadorizza/banca-dati-merito-mcp/issues",
+  "type": "module",
+  "bin": {
+    "banca-dati-merito-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test 'test/**/*.test.ts'",
+    "smoke": "node scripts/smoke.ts",
+    "check": "npm run typecheck && npm test",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "playwright-core": "^1.64.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.9.3"
+  }
+}

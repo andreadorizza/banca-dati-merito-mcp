@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.mcpb
+.DS_Store
+# Live captures stay local: they can contain session data.
+test/fixtures/raw/

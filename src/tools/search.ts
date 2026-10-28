@@ -1,0 +1,191 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { RESULT_WINDOW } from "../config.ts";
+import { searchAbstract, searchProvvedimenti, SORT_KEYS, suggest, type SearchParams } from "../bdp/client.ts";
+import { ABSTRACT_FIELDS, buildQuery, DATE_FIELDS, PROVVEDIMENTO_FIELDS, TEXT_MODES, type Target } from "../bdp/query.ts";
+import { requireSession } from "../session/status.ts";
+import { areaParam, formatEstremi, pagingParams, READ_ONLY, snippets, targetParam } from "./common.ts";
+import { ok, run } from "./result.ts";
+
+const criterion = <F extends readonly [string, ...string[]]>(fields: F) =>
+  z.object({
+    campo: z.enum(fields).describe("Campo della Banca Dati."),
+    valore: z
+      .string()
+      .trim()
+      .min(1)
+      .describe("Valore esatto come lo usa la Banca Dati (ottienilo con `risolvi_criteri`)."),
+  });
+
+const searchShape = <F extends readonly [string, ...string[]]>(fields: F) => ({
+  criteri: z.array(criterion(fields)).max(20).optional().describe("Condizioni sui campi, combinate in AND."),
+  escludi: z.array(criterion(fields)).max(10).optional().describe("Condizioni da escludere (AND NOT)."),
+  testo: z
+    .object({
+      valore: z.string().trim().min(1).max(500),
+      modalita: z
+        .enum(TEXT_MODES)
+        .default("tutte")
+        .describe("tutte = tutte le parole; almeno_una = almeno una parola; frase_esatta = la frase tale e quale."),
+    })
+    .optional()
+    .describe("Ricerca nel testo."),
+  date: z
+    .object({
+      campo: z
+        .enum(DATE_FIELDS)
+        .default("data_pubblicazione")
+        .describe("data = deposito della minuta; data_pubblicazione = pubblicazione."),
+      da: z.string().optional().describe("AAAA-MM-GG"),
+      a: z.string().optional().describe("AAAA-MM-GG"),
+    })
+    .optional(),
+  note_personali: z.string().trim().min(1).optional().describe("Cerca nelle note personali dell'utente."),
+  solo_cartelle_personali: z
+    .boolean()
+    .default(false)
+    .describe("Limita ai documenti salvati nelle cartelle personali dell'utente."),
+  ordina_per: z.enum(SORT_KEYS).optional().describe("Predefinito: rilevanza se c'è un testo, altrimenti data_pubblicazione."),
+  ordine: z.enum(["asc", "desc"]).default("desc"),
+  area: areaParam,
+  ...pagingParams,
+});
+
+const provvedimentiShape = searchShape(PROVVEDIMENTO_FIELDS);
+const abstractShape = searchShape(ABSTRACT_FIELDS);
+
+type SearchInput =
+  | z.output<z.ZodObject<typeof provvedimentiShape>>
+  | z.output<z.ZodObject<typeof abstractShape>>;
+
+const toSearchParams = (target: Target, input: SearchInput): SearchParams => {
+  if (input.da + input.quanti > RESULT_WINDOW) {
+    throw new RangeError(`La Banca Dati mostra solo i primi ${RESULT_WINDOW} risultati: restringi la ricerca.`);
+  }
+  return {
+    area: input.area,
+    q: buildQuery(target, input),
+    from: input.da,
+    size: input.quanti,
+    sortField: input.ordina_per ?? (input.testo ? "rilevanza" : "data_pubblicazione"),
+    sortOrder: input.ordine,
+    soloCartellePersonali: input.solo_cartelle_personali,
+    notePersonali: input.note_personali,
+  };
+};
+
+const pageSummary = (count: number, from: number, returned: number) => ({
+  totale: count,
+  sfogliabili: Math.min(count, RESULT_WINDOW),
+  da: from,
+  restituiti: returned,
+  ...(from + returned < Math.min(count, RESULT_WINDOW) ? { prossimo_da: from + returned } : {}),
+});
+
+/** Autocomplete types that are not field criteria: full text and personal notes have their own parameters. */
+const NON_CRITERION_TYPES = new Set(["anonymized_testo", "testo", "note_personali"]);
+
+export const registerSearchTools = (server: McpServer): void => {
+  server.registerTool(
+    "risolvi_criteri",
+    {
+      title: "Risolvi criteri di ricerca",
+      description:
+        "Trasforma un nome detto dall'utente (un tribunale, una città, un giudice, un tema) nei criteri esatti della Banca Dati, con il campo giusto. Usalo prima di cercare per ufficio, distretto, giudice, parola chiave o materia: i criteri funzionano solo con il valore esatto.",
+      inputSchema: {
+        testo: z.string().trim().min(2).max(200).describe("Il nome o il tema, come lo dice l'utente."),
+        tipo: targetParam.default("provvedimenti"),
+        area: areaParam,
+      },
+      annotations: READ_ONLY,
+    },
+    ({ testo, tipo, area }) =>
+      run(async () => {
+        const suggestions = await suggest(await requireSession(), tipo, testo, area);
+        const criteri = suggestions
+          .filter((s) => !NON_CRITERION_TYPES.has(s.type))
+          .map((s) => ({ campo: s.type, valore: s.text, etichetta: s.label }));
+        return ok({
+          criteri,
+          nota:
+            criteri.length === 0
+              ? "Nessun criterio corrispondente: usa il parametro `testo` della ricerca."
+              : "Passa i criteri scelti in `criteri` di cerca_provvedimenti o cerca_abstract, con lo stesso campo e valore.",
+        });
+      }),
+  );
+
+  server.registerTool(
+    "cerca_provvedimenti",
+    {
+      title: "Cerca provvedimenti",
+      description:
+        "Cerca sentenze, ordinanze e decreti di merito nella Banca Dati, per testo, criteri di campo e date. Senza filtri restituisce gli ultimi pubblicati. Restituisce estremi, metadati, estratti evidenziati e gli abstract collegati; per il testo completo usa leggi_testo_provvedimento.",
+      inputSchema: provvedimentiShape,
+      annotations: READ_ONLY,
+    },
+    (input) =>
+      run(async () => {
+        const params = toSearchParams("provvedimenti", input);
+        const page = await searchProvvedimenti(await requireSession(), params);
+        return ok({
+          ...pageSummary(page.count, input.da, page.items.length),
+          risultati: page.items.map((item) => ({
+            id: item.id,
+            tipo: item.tipo,
+            ufficio: item.ufficio,
+            ...formatEstremi(item),
+            data: item.data,
+            data_pubblicazione: item.data_pubblicazione,
+            distretto: item.distretto,
+            materia: item.materia,
+            ruolo: item.ruolo,
+            parole_chiave: item.parola_chiave,
+            riferimenti_normativi: item.riferimento_normativo,
+            presidente: item.presidente,
+            relatore: item.relatore,
+            giudice_assegnatario_fascicolo: item.giudice_assegnatario_fascicolo,
+            estratti: snippets(item.estratto),
+            abstract: item.abstract ?? [],
+          })),
+        });
+      }),
+  );
+
+  server.registerTool(
+    "cerca_abstract",
+    {
+      title: "Cerca abstract",
+      description:
+        "Cerca gli abstract della Banca Dati, cioè le sintesi dei principi affermati nei provvedimenti. Usalo per gli orientamenti su una questione. Un abstract non è una massima ufficiale. Senza filtri restituisce gli ultimi pubblicati.",
+      inputSchema: abstractShape,
+      annotations: READ_ONLY,
+    },
+    (input) =>
+      run(async () => {
+        const params = toSearchParams("abstract", input);
+        const page = await searchAbstract(await requireSession(), params);
+        return ok({
+          ...pageSummary(page.count, input.da, page.items.length),
+          risultati: page.items.map((item) => ({
+            id: item.id,
+            titolo: item.titolo,
+            testo: item.testo,
+            provvedimento: {
+              id: item.provvedimento?.id ?? null,
+              tipo: item.tipo,
+              ufficio: item.ufficio,
+              ...formatEstremi(item),
+              data: item.data,
+              data_pubblicazione: item.data_pubblicazione,
+            },
+            distretto: item.distretto,
+            materia: item.materia,
+            parole_chiave: item.parola_chiave,
+            riferimenti_normativi: item.riferimento_normativo,
+            estratti: snippets(item.estratto),
+          })),
+        });
+      }),
+  );
+};
