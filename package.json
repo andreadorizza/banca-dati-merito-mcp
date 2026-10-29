@@ -1,6 +1,6 @@
 {
   "name": "banca-dati-merito-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Server MCP non ufficiale per la Banca Dati di Merito del Ministero della Giustizia (bdp.giustizia.it): ricerca e lettura di provvedimenti e abstract con la propria sessione CIE/SPID/CNS.",
   "keywords": [
     "mcp",
