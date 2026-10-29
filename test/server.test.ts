@@ -34,6 +34,14 @@ describe("MCP server", () => {
     }
   });
 
+  it("tells the model to read the full text before citing a search result", async () => {
+    // Claude Desktop cannot load the skill, so the tool descriptions must carry this rule.
+    const { tools } = await (await connect()).listTools();
+    for (const name of ["cerca_provvedimenti", "cerca_abstract"]) {
+      assert.match(tools.find((t) => t.name === name)?.description ?? "", /leggi_testo_provvedimento/, name);
+    }
+  });
+
   it("lists the same tools as the Claude Desktop manifest", async () => {
     const { tools } = await (await connect()).listTools();
     const manifest = z

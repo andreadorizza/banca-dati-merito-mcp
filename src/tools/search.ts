@@ -85,6 +85,20 @@ const pageSummary = (count: number, from: number, returned: number) => ({
 });
 
 /**
+ * Repeated in every non-empty result, not only in the tool description: in a live
+ * test the model summarised rulings from their snippets without reading any text.
+ */
+const READ_BEFORE_CITING = {
+  provvedimenti:
+    "Gli estratti sono frammenti scelti dalla ricerca, non il principio del provvedimento. Prima di attribuire un principio a un provvedimento, leggine il testo con leggi_testo_provvedimento.",
+  abstract:
+    "Un abstract è una sintesi pubblicata dalla Banca Dati, non una massima ufficiale. Prima di citarlo come principio del provvedimento, verificalo nel testo con leggi_testo_provvedimento (usa provvedimento.id).",
+} as const satisfies Record<Target, string>;
+
+const readingNote = (target: Target, returned: number) =>
+  returned > 0 ? { avvertenza: READ_BEFORE_CITING[target] } : {};
+
+/**
  * Autocomplete also suggests full text and personal notes, which have their own
  * parameters; only fields the matching search accepts are passed on as criteria.
  */
@@ -133,7 +147,7 @@ export const registerSearchTools = (server: McpServer): void => {
     {
       title: "Cerca provvedimenti",
       description:
-        "Cerca sentenze, ordinanze e decreti di merito nella Banca Dati, per testo, criteri di campo e date. Senza filtri restituisce gli ultimi pubblicati. Restituisce estremi, metadati, estratti evidenziati e gli abstract collegati; per il testo completo usa leggi_testo_provvedimento.",
+        "Cerca sentenze, ordinanze e decreti di merito nella Banca Dati, per testo, criteri di campo e date. Senza filtri restituisce gli ultimi pubblicati. Restituisce estremi, metadati, estratti evidenziati e gli abstract collegati. Gli estratti sono frammenti: non bastano per dire che cosa ha deciso un provvedimento. Prima di riferire il principio o l'esito di un provvedimento, leggine il testo con leggi_testo_provvedimento.",
       inputSchema: provvedimentiShape,
       annotations: READ_ONLY,
     },
@@ -145,6 +159,7 @@ export const registerSearchTools = (server: McpServer): void => {
         const page = await searchProvvedimenti(ctx, params);
         return ok({
           ...pageSummary(page.count, input.da, page.items.length),
+          ...readingNote("provvedimenti", page.items.length),
           risultati: page.items.map((item) => ({
             id: item.id,
             tipo: item.tipo,
@@ -173,7 +188,7 @@ export const registerSearchTools = (server: McpServer): void => {
     {
       title: "Cerca abstract",
       description:
-        "Cerca gli abstract della Banca Dati, cioè le sintesi dei principi affermati nei provvedimenti. Usalo per gli orientamenti su una questione. Un abstract non è una massima ufficiale. Senza filtri restituisce gli ultimi pubblicati.",
+        "Cerca gli abstract della Banca Dati, cioè le sintesi dei principi affermati nei provvedimenti. Usalo per gli orientamenti su una questione. Un abstract non è una massima ufficiale: prima di citarlo come principio di un provvedimento, verificalo nel testo con leggi_testo_provvedimento. Senza filtri restituisce gli ultimi pubblicati.",
       inputSchema: abstractShape,
       annotations: READ_ONLY,
     },
@@ -184,6 +199,7 @@ export const registerSearchTools = (server: McpServer): void => {
         const page = await searchAbstract(ctx, params);
         return ok({
           ...pageSummary(page.count, input.da, page.items.length),
+          ...readingNote("abstract", page.items.length),
           risultati: page.items.map((item) => ({
             id: item.id,
             titolo: item.titolo,

@@ -10,7 +10,7 @@ GitHub con il pacchetto `.mcpb` per Claude Desktop.
 node scripts/set-version.ts 0.2.0
 npm run check
 git commit -am "chore: release 0.2.0"
-git tag v0.2.0
+git tag -a v0.2.0 -m v0.2.0
 git push --follow-tags
 ```
 

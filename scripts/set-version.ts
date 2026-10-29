@@ -51,4 +51,4 @@ await editJson(".claude-plugin/plugin.json", (json) => {
 await editText(".claude-plugin/plugin.json", pin);
 await editText("README.md", pin);
 
-console.log(`Versione ${version}. Ora: npm test, commit, git tag v${version}, git push --follow-tags.`);
+console.log(`Versione ${version}. Ora: npm test, commit, git tag -a v${version} -m v${version}, git push --follow-tags (solo i tag annotati vengono inviati).`);
