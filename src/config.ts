@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
+import { BdpError } from "./errors.ts";
 
 export const BDP_HOST = "bdp.giustizia.it";
 export const BDP_ORIGIN = `https://${BDP_HOST}`;
@@ -23,10 +24,24 @@ const FLOOR_MIN_INTERVAL_MS = 250;
 
 const APP_NAME = "banca-dati-merito-mcp";
 
+/**
+ * An environment value as clients actually pass it. Claude Desktop forwards an
+ * empty or unresolved `${user_config.x}` literally and does not expand `${HOME}`
+ * in defaults, so those placeholders are resolved (or treated as unset) here.
+ */
+const envValue = (name: string): string | undefined => {
+  const raw = process.env[name]?.trim();
+  if (!raw || /\$\{user_config\.[^}]*\}/.test(raw)) return undefined;
+  return raw
+    .replace(/^~(?=$|[/\\])/, homedir())
+    .replace(/\$\{HOME\}|\$HOME\b/g, homedir())
+    .replace(/\$\{(DOCUMENTS|DESKTOP)\}/g, (_, dir: string) => join(homedir(), dir === "DOCUMENTS" ? "Documents" : "Desktop"));
+};
+
 /** Milliseconds between the start of two BDP requests. Configurable, never below the floor. */
 export const minIntervalMs = (): number => {
-  const raw = process.env.BDM_MIN_INTERVAL_MS;
-  if (raw === undefined || raw === "") return DEFAULT_MIN_INTERVAL_MS;
+  const raw = envValue("BDM_MIN_INTERVAL_MS");
+  if (raw === undefined) return DEFAULT_MIN_INTERVAL_MS;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed)) {
     throw new Error(`BDM_MIN_INTERVAL_MS non è un numero: ${raw}`);
@@ -36,7 +51,7 @@ export const minIntervalMs = (): number => {
 
 /** Per-user folder for the session file and the dedicated browser profile. */
 export const appDir = (): string => {
-  const override = process.env.BDM_HOME;
+  const override = envValue("BDM_HOME");
   if (override) return override;
   switch (process.platform) {
     case "darwin":
@@ -51,5 +66,12 @@ export const appDir = (): string => {
 export const sessionFile = (): string => join(appDir(), "sessione.json");
 export const browserProfileDir = (): string => join(appDir(), "browser-profile");
 
-export const downloadDir = (): string =>
-  process.env.BDM_DOWNLOAD_DIR || join(homedir(), "Downloads", "banca-dati-merito");
+export const downloadDir = (): string => {
+  const configured = envValue("BDM_DOWNLOAD_DIR");
+  if (configured === undefined) return join(homedir(), "Downloads", "banca-dati-merito");
+  // A relative path would land wherever the client started the server (often "/").
+  if (!isAbsolute(configured)) {
+    throw new BdpError("parametri", `La cartella per i PDF deve essere un percorso assoluto: ${configured}`);
+  }
+  return configured;
+};

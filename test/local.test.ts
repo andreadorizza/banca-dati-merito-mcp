@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { before, describe, it } from "node:test";
 import { z } from "zod";
 import { request } from "../src/bdp/http.ts";
-import { sessionFile } from "../src/config.ts";
+import { downloadDir, minIntervalMs, sessionFile } from "../src/config.ts";
 import { BdpError } from "../src/errors.ts";
 import { loadSession, saveSession, type Session } from "../src/session/store.ts";
 import { safeFileName } from "../src/tools/read.ts";
@@ -70,5 +70,37 @@ describe("release metadata", () => {
     assert.ok(plugin.includes(`banca-dati-merito-mcp@${pkg}`), "plugin.json must pin the npm version");
     const readme = await readFile(new URL("../README.md", import.meta.url), "utf8");
     for (const match of readme.matchAll(/banca-dati-merito-mcp@([\d.]+)/g)) assert.equal(match[1], pkg);
+  });
+});
+
+describe("configuration from clients", () => {
+  const withEnv = <T>(name: string, value: string, read: () => T): T => {
+    const previous = process.env[name];
+    process.env[name] = value;
+    try {
+      return read();
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
+  };
+
+  it("expands the ${HOME} that Claude Desktop passes through unexpanded", () => {
+    assert.equal(
+      withEnv("BDM_DOWNLOAD_DIR", "${HOME}/Downloads/banca-dati-merito", downloadDir),
+      join(homedir(), "Downloads", "banca-dati-merito"),
+    );
+    assert.equal(withEnv("BDM_DOWNLOAD_DIR", "~/PDF", downloadDir), join(homedir(), "PDF"));
+  });
+
+  it("treats an unresolved user_config placeholder or a blank value as unset", () => {
+    const fallback = join(homedir(), "Downloads", "banca-dati-merito");
+    assert.equal(withEnv("BDM_DOWNLOAD_DIR", "${user_config.download_dir}", downloadDir), fallback);
+    assert.equal(withEnv("BDM_DOWNLOAD_DIR", "  ", downloadDir), fallback);
+    assert.equal(withEnv("BDM_MIN_INTERVAL_MS", "${user_config.min_interval_ms}", minIntervalMs), 1000);
+  });
+
+  it("rejects a relative download folder instead of writing under the client's working directory", () => {
+    assert.throws(() => withEnv("BDM_DOWNLOAD_DIR", "Downloads/pdf", downloadDir), isCode("parametri"));
   });
 });
