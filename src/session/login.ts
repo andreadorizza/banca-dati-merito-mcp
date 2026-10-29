@@ -14,8 +14,10 @@ const REPLAYED_HINTS = ["sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform"] a
 const CurrentUserSchema = z.object({
   upn: z.string().nullish(),
   /** Unix seconds. */
-  exp: z.number().nullish(),
+  exp: z.union([z.number(), z.string().regex(/^\d+$/).transform(Number)]).nullish(),
 });
+
+type CurrentUser = z.infer<typeof CurrentUserSchema>;
 
 export type LoginState =
   | { status: "inattivo" }
@@ -48,25 +50,42 @@ const launch = async (): Promise<BrowserContext> => {
   );
 };
 
-const currentUser = async (context: BrowserContext): Promise<z.infer<typeof CurrentUserSchema> | null> => {
+/** Errors that only mean "the page navigated while we asked": try again on the next poll. */
+const NAVIGATION_RACE = /Execution context was destroyed|Cannot find context|navigat/i;
+
+/**
+ * Asks BDP who is signed in, from inside a BDP page. The request must come from
+ * the browser: Node-side requests (`context.request`) fail on BDP's incomplete
+ * certificate chain, which browsers repair on their own.
+ */
+const readCurrentUser = async (context: BrowserContext): Promise<CurrentUser | null> => {
+  const page = context.pages().find((p) => p.url().startsWith(`${BDP_ORIGIN}/`));
+  if (!page) return null;
+  let body: unknown;
   try {
-    const response = await context.request.get(`${BDP_ORIGIN}${API_PATH}/user/current`, { failOnStatusCode: false });
-    if (!response.ok()) return null;
-    const parsed = CurrentUserSchema.safeParse(await response.json());
-    return parsed.success ? parsed.data : null;
-  } catch {
-    // The browser may be mid-redirect between identity-provider pages; try again next poll.
-    return null;
+    body = await page.evaluate(async (url) => {
+      const response = await fetch(url, { credentials: "include" });
+      return response.ok ? response.json() : null;
+    }, `${API_PATH}/user/current`);
+  } catch (error) {
+    if (error instanceof Error && NAVIGATION_RACE.test(error.message)) return null;
+    throw error;
   }
+  if (body === null) return null;
+  const parsed = CurrentUserSchema.safeParse(body);
+  if (!parsed.success) {
+    throw new BdpError("login_fallito", `Risposta inattesa da user/current: ${z.prettifyError(parsed.error)}`);
+  }
+  return parsed.data;
 };
 
-const waitForSignIn = async (context: BrowserContext): Promise<z.infer<typeof CurrentUserSchema>> => {
+const waitForSignIn = async (context: BrowserContext): Promise<CurrentUser> => {
   const deadline = Date.now() + LOGIN_TIMEOUT_MS;
   while (Date.now() < deadline) {
     if (context.pages().length === 0) {
       throw new BdpError("login_fallito", "La finestra del login è stata chiusa prima di completare l'accesso.");
     }
-    const user = await currentUser(context);
+    const user = await readCurrentUser(context);
     if (user?.upn) return user;
     await new Promise((resolve) => setTimeout(resolve, POLL_MS));
   }
@@ -98,9 +117,9 @@ const runLogin = async (): Promise<Session> => {
   const context = await launch();
   try {
     const page = context.pages()[0] ?? (await context.newPage());
-    // With a still-valid sign-in in the dedicated profile, BDP logs in without a new CIE/SPID step.
-    const alreadySignedIn = (await currentUser(context))?.upn;
-    if (!alreadySignedIn) await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded" });
+    // With a still-valid sign-in in the dedicated profile, the identity provider
+    // sends the browser straight back without a new SPID/CIE step.
+    await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded" });
     const user = await waitForSignIn(context);
     const { userAgent, clientHints } = await captureBrowserHeaders(context);
     const cookies: StoredCookie[] = (await context.cookies(`${BDP_ORIGIN}${API_PATH}/`)).map((cookie) => ({
