@@ -25,7 +25,8 @@ strumenti del server `banca-dati-merito` la interrogano con la sessione dell'ute
 2. **Traduci i nomi in valori esatti.** I criteri funzionano solo con il valore che usa
    la BDP ("TRIBUNALE DI BOLOGNA", non "Tribunale di Bologna" o "Bologna"). Usa
    `risolvi_criteri` con il nome come lo dice l'utente e scegli il valore e il campo
-   giusti tra quelli proposti.
+   giusti tra quelli proposti. Per vedere tutte le opzioni usa `elenca_uffici` (uffici
+   per distretto) o `elenca_valori` (materie, ruoli).
 3. **Cerca gli orientamenti negli abstract, le decisioni nei provvedimenti.** Per "qual è
    l'orientamento su…" parti da `cerca_abstract`; per "trova le sentenze che…" usa
    `cerca_provvedimenti`.
