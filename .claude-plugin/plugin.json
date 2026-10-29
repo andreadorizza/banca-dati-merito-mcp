@@ -9,12 +9,23 @@
   "homepage": "https://github.com/andreadorizza/banca-dati-merito-mcp#readme",
   "repository": "https://github.com/andreadorizza/banca-dati-merito-mcp",
   "license": "Apache-2.0",
-  "keywords": ["giurisprudenza", "banca-dati-di-merito", "legal", "italia", "mcp"],
-  "skills": ["./skills/ricerca-banca-dati-merito"],
+  "keywords": [
+    "giurisprudenza",
+    "banca-dati-di-merito",
+    "legal",
+    "italia",
+    "mcp"
+  ],
+  "skills": [
+    "./skills/ricerca-banca-dati-merito"
+  ],
   "mcpServers": {
     "banca-dati-merito": {
       "command": "npx",
-      "args": ["-y", "banca-dati-merito-mcp@0.1.0"]
+      "args": [
+        "-y",
+        "banca-dati-merito-mcp@0.1.0"
+      ]
     }
   }
 }
