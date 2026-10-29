@@ -12,19 +12,26 @@ import {
   VIEW_ABSTRACT,
   VIEW_PROVVEDIMENTO,
 } from "./graphql.ts";
-import { request, type RequestSpec } from "./http.ts";
+import { DOCUMENT_DEADLINE_MS, request, type RequestOptions, type RequestSpec } from "./http.ts";
 import type { Target } from "./query.ts";
 import {
   AbstractDettaglioSchema,
   AbstractRisultatoSchema,
+  ArchivioSchema,
   CartellaSchema,
   CartelleDiDocumentoSchema,
   CartelleSchema,
+  GeografiaSchema,
   GraphQlEnvelopeSchema,
+  OccorrenzeSchema,
   pageOf,
   ProvvedimentoDettaglioSchema,
   ProvvedimentoRisultatoSchema,
+  PubblicazioniSchema,
+  RicercheSalvateSchema,
   SuggerimentiSchema,
+  TimelineSchema,
+  ValoriSchema,
 } from "./schemas.ts";
 
 /** BDP's REST paths name the abstract `massima`. */
@@ -146,12 +153,17 @@ export const getTestoProvvedimento = async (session: Session, id: string): Promi
   return response.body.toString("utf8");
 };
 
-export const getDocumento = async (session: Session, target: Target, id: string): Promise<Buffer> => {
-  const response = await request(session, {
-    method: "GET",
-    path: `${REST_TARGET[target]}/${encodeURIComponent(id)}/document`,
-    accept: "application/pdf",
-  });
+export const getDocumento = async (
+  session: Session,
+  target: Target,
+  id: string,
+  onProgress?: RequestOptions["onProgress"],
+): Promise<Buffer> => {
+  const response = await request(
+    session,
+    { method: "GET", path: `${REST_TARGET[target]}/${encodeURIComponent(id)}/document`, accept: "application/pdf" },
+    onProgress ? { deadlineMs: DOCUMENT_DEADLINE_MS, onProgress } : { deadlineMs: DOCUMENT_DEADLINE_MS },
+  );
   if (!response.contentType.includes("pdf")) {
     throw new BdpError("risposta_inattesa", `Il documento richiesto non è un PDF (${response.contentType}).`);
   }
@@ -159,7 +171,7 @@ export const getDocumento = async (session: Session, target: Target, id: string)
 };
 
 export const getTimeline = (session: Session, id: string) =>
-  getJson(session, { method: "GET", path: `provvedimento/${encodeURIComponent(id)}/timeline` }, z.unknown());
+  getJson(session, { method: "GET", path: `provvedimento/${encodeURIComponent(id)}/timeline` }, TimelineSchema);
 
 export const suggest = (session: Session, target: Target, text: string, area: string) =>
   getJson(
@@ -172,22 +184,18 @@ export const getOccorrenze = (session: Session, target: Target, area: string, ca
   getJson(
     session,
     { method: "GET", path: `${REST_TARGET[target]}/occurrence/${encodeURIComponent(area)}/${encodeURIComponent(campo)}` },
-    z.unknown(),
+    OccorrenzeSchema,
   );
 
-export const LIST_KEYS = ["materia", "ruolo", "uffici_per_distretto"] as const;
+export const LIST_KEYS = ["materia", "ruolo"] as const;
 export type ListSource = (typeof LIST_KEYS)[number];
 
-const LIST_SOURCES = {
-  materia: { path: "materia", needsArea: true },
-  ruolo: { path: "ruolo", needsArea: true },
-  uffici_per_distretto: { path: "ufficio/geografia", needsArea: false },
-} as const satisfies Record<ListSource, { path: string; needsArea: boolean }>;
+export const listValues = (session: Session, source: ListSource, area: string) =>
+  getJson(session, { method: "GET", path: source, query: { area } }, ValoriSchema);
 
-export const listValues = (session: Session, source: ListSource, area: string) => {
-  const { path, needsArea } = LIST_SOURCES[source];
-  return getJson(session, { method: "GET", path, query: needsArea ? { area } : {} }, z.unknown());
-};
+/** Every court office with its district; BDP's own front end caches this list. */
+export const getGeografia = (session: Session) =>
+  getJson(session, { method: "GET", path: "ufficio/geografia" }, GeografiaSchema);
 
 export const LOOKUP_KEYS = ["ufficio", "giudice", "parola_chiave", "riferimento_normativo"] as const;
 export type LookupSource = (typeof LOOKUP_KEYS)[number];
@@ -201,11 +209,11 @@ const LOOKUP_SOURCES = {
 
 export const lookupValues = (session: Session, source: LookupSource, text: string, area: string) => {
   const { path, needsArea } = LOOKUP_SOURCES[source];
-  return getJson(session, { method: "GET", path, query: needsArea ? { q: text, area } : { q: text } }, z.unknown());
+  return getJson(session, { method: "GET", path, query: needsArea ? { q: text, area } : { q: text } }, ValoriSchema);
 };
 
 export const getPubblicazioni = (session: Session) =>
-  getJson(session, { method: "GET", path: "monitor/published" }, z.unknown());
+  getJson(session, { method: "GET", path: "monitor/published" }, PubblicazioniSchema);
 
 export type ArchivioParams = {
   area: string;
@@ -217,10 +225,10 @@ export type ArchivioParams = {
 };
 
 export const getArchivio = (session: Session, params: ArchivioParams) =>
-  getJson(session, { method: "POST", path: "archive/occurrences", json: params }, z.unknown());
+  getJson(session, { method: "POST", path: "archive/occurrences", json: params }, ArchivioSchema);
 
 export const getRicercheSalvate = (session: Session, target: Target) =>
-  getJson(session, { method: "GET", path: `${REST_TARGET[target]}/filter` }, z.unknown());
+  getJson(session, { method: "GET", path: `${REST_TARGET[target]}/filter` }, RicercheSalvateSchema);
 
 export const getCartellePersonali = async (session: Session) =>
   (await graphql(session, CARTELLE_PERSONALI, {}, CartelleSchema)).cartelle;

@@ -1,0 +1,102 @@
+{
+  "data": {
+    "provvedimento": {
+      "count": 3884456,
+      "items": [
+        {
+          "id": "60a27acdc22865c3d6616c90cfad536e8e28e20e47244591a10c624322825dbf",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI CATANIA",
+          "numero_provvedimento": "1238",
+          "anno_provvedimento": "2019",
+          "numero_ruolo": "00002084",
+          "anno_ruolo": "2018",
+          "sub_procedimento": null,
+          "data": "19/03/2019",
+          "data_pubblicazione": "19/03/2019",
+          "distretto": "CATANIA",
+          "materia": "LAVORO DIPENDENTE DA PRIVATO",
+          "ruolo": "CONTROVERSIE IN MATERIA DI LAVORO, PREV., ASSIST. OBBLIG.",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "ALTRE IPOTESI"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "abstract": []
+        },
+        {
+          "id": "4614c67d4c50ec282b0952d80c10520eb9ead8b36e891230bb10da926e11583d",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI ROMA",
+          "numero_provvedimento": "5583",
+          "anno_provvedimento": "2025",
+          "numero_ruolo": "00018873",
+          "anno_ruolo": "2024",
+          "sub_procedimento": null,
+          "data": "26/06/2025",
+          "data_pubblicazione": "26/06/2025",
+          "distretto": "ROMA",
+          "materia": "LAVORO DIPENDENTE DA PRIVATO",
+          "ruolo": "CONTROVERSIE IN MATERIA DI LAVORO, PREV., ASSIST. OBBLIG.",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "ALTRE IPOTESI"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "abstract": []
+        },
+        {
+          "id": "33b5c148c8758c67299bd3eb8590c791b47bfb685576003075294d210ebf4252",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI VENEZIA",
+          "numero_provvedimento": "137",
+          "anno_provvedimento": "2022",
+          "numero_ruolo": "00001138",
+          "anno_ruolo": "2021",
+          "sub_procedimento": null,
+          "data": "25/02/2022",
+          "data_pubblicazione": "25/02/2022",
+          "distretto": "VENEZIA",
+          "materia": "LAVORO DIPENDENTE DA PRIVATO",
+          "ruolo": "CONTROVERSIE IN MATERIA DI LAVORO, PREV., ASSIST. OBBLIG.",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "ALTRE IPOTESI"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "abstract": []
+        }
+      ]
+    }
+  }
+}

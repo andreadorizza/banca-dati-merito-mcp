@@ -1,0 +1,108 @@
+{
+  "data": {
+    "massima": {
+      "count": 49,
+      "items": [
+        {
+          "id": "dcdceed09f10ddeace7b6e8425b36a1a89dc85ba2536ab80bbd8888a220e65b2",
+          "area": "CIVILE",
+          "titolo": "Testo di esempio.",
+          "tipo": "SENTENZA",
+          "ufficio": "CORTE DI APPELLO DI FIRENZE",
+          "numero_provvedimento": "2579",
+          "anno_provvedimento": "2022",
+          "numero_ruolo": "00000161",
+          "anno_ruolo": "2020",
+          "sub_procedimento": null,
+          "data": "17/11/2022",
+          "data_pubblicazione": "18/11/2022",
+          "distretto": "FIRENZE",
+          "materia": null,
+          "ruolo": null,
+          "parola_chiave": [
+            "DIRITTO SOCIETARIO",
+            "PROCEDIMENTI ANTE DLGS /",
+            "ALTRI ISTITUTI DI DIRITTO SOCIETARIO"
+          ],
+          "riferimento_normativo": [],
+          "testo": "Testo di esempio.",
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "provvedimento": {
+            "id": "04959c7f457059f06618b1b75b32d78b1195e56cac538019bcc13abb2325343d"
+          }
+        },
+        {
+          "id": "03b07f38aeb8e346ec26c38d244e97202c74066769072204ef8b56b4065f8f19",
+          "area": "CIVILE",
+          "titolo": "Testo di esempio.",
+          "tipo": "SENTENZA",
+          "ufficio": "CORTE DI APPELLO DI CALTANISSETTA",
+          "numero_provvedimento": "288",
+          "anno_provvedimento": "2023",
+          "numero_ruolo": "00000378",
+          "anno_ruolo": "2022",
+          "sub_procedimento": "",
+          "data": "26/07/2023",
+          "data_pubblicazione": "27/07/2023",
+          "distretto": "CALTANISSETTA",
+          "materia": "FAMIGLIA",
+          "ruolo": "GENERALE DEGLI AFFARI CIVILI CONTENZIOSI",
+          "parola_chiave": [
+            "SEPARAZIONE GIUDIZIALE",
+            "CONTRIBUTO ABITATIVO"
+          ],
+          "riferimento_normativo": [
+            "ART. 337-SEXIES C.C."
+          ],
+          "testo": "Testo di esempio.",
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "provvedimento": null
+        },
+        {
+          "id": "c7941a8d34ad44867c68510c7bc550f0d5349c14b4b1520cd25784435d490f12",
+          "area": "CIVILE",
+          "titolo": "Testo di esempio.",
+          "tipo": "SENTENZA",
+          "ufficio": "CORTE DI APPELLO DI PERUGIA",
+          "numero_provvedimento": "332",
+          "anno_provvedimento": "2022",
+          "numero_ruolo": "00000619",
+          "anno_ruolo": "2021",
+          "sub_procedimento": null,
+          "data": "16/07/2020",
+          "data_pubblicazione": "06/08/2020",
+          "distretto": "PERUGIA",
+          "materia": "CONTRATTI E OBBLIGAZIONI VARIE",
+          "ruolo": null,
+          "parola_chiave": [
+            "VENDITA DI COSE MOBILI",
+            "NULLITÀ",
+            "CONTRATTO DI COMODATO"
+          ],
+          "riferimento_normativo": [
+            "ART. 13 L. N. 431/1998",
+            "ART. 1803 C.C."
+          ],
+          "testo": "Testo di esempio.",
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "provvedimento": {
+            "id": "68df8c40e16818f6d8b97181ce521e3ca9f5b2ecd309d0b64dc3858149f7a7ea"
+          }
+        }
+      ]
+    }
+  }
+}

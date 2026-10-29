@@ -7,7 +7,10 @@ export const API_PATH = "/api/bdm/frontoffice";
 /** Entry point of BDP's own login: redirects to the Ministry's identity provider (SPID, CIE, CNS, eIDAS). */
 export const LOGIN_URL = `${BDP_ORIGIN}${API_PATH}/azure`;
 
-/** BDP's only area today. Kept as a parameter default because BDP may add others. */
+/**
+ * Searches return results only in CIVILE today, although BDP's statistics already
+ * count some PENALE decisions; hence a parameter with this default.
+ */
 export const DEFAULT_AREA = "CIVILE";
 
 export const DEFAULT_RESULTS = 20;

@@ -1,0 +1,27 @@
+[
+  {
+    "type": "anonymized_testo",
+    "text": "LOCAZIONE",
+    "label": "Testo"
+  },
+  {
+    "type": "anonymized_testo",
+    "text": "\"LOCAZIONE\"",
+    "label": "Frase esatta"
+  },
+  {
+    "type": "note_personali",
+    "text": "LOCAZIONE",
+    "label": "Note personali"
+  },
+  {
+    "type": "materia",
+    "text": "LOCAZIONE E COMODATO DI IMMOBILE URBANO - AFFITTO DI AZIENDA",
+    "label": "Materia"
+  },
+  {
+    "type": "parola_chiave",
+    "text": "LOCAZIONE",
+    "label": "Parola chiave"
+  }
+]

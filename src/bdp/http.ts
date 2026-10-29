@@ -12,7 +12,18 @@ export type RequestSpec =
 
 export type RawResponse = { status: number; contentType: string; body: Buffer };
 
-const TIMEOUT_MS = 40_000;
+export type RequestOptions = {
+  /**
+   * Total time allowed, separate from the idle timeout: BDP builds document PDFs
+   * on the fly, taking over 10 seconds to start and about 6 KB/s after that.
+   */
+  deadlineMs?: number;
+  onProgress?: (received: number, total: number | undefined) => void;
+};
+
+const IDLE_TIMEOUT_MS = 40_000;
+const DEFAULT_DEADLINE_MS = 60_000;
+export const DOCUMENT_DEADLINE_MS = 180_000;
 const MAX_BODY_BYTES = 50 * 1024 * 1024;
 
 /**
@@ -70,9 +81,10 @@ const headersFor = (session: Session, spec: RequestSpec): Record<string, string>
   }
 };
 
-const send = (session: Session, spec: RequestSpec): Promise<RawResponse> =>
+const send = (session: Session, spec: RequestSpec, options: RequestOptions): Promise<RawResponse> =>
   new Promise((resolve, reject) => {
     const payload = spec.method === "POST" ? Buffer.from(JSON.stringify(spec.json)) : undefined;
+    const deadlineMs = options.deadlineMs ?? DEFAULT_DEADLINE_MS;
     const req = https.request(
       {
         host: BDP_HOST,
@@ -80,10 +92,12 @@ const send = (session: Session, spec: RequestSpec): Promise<RawResponse> =>
         method: spec.method,
         headers: payload ? { ...headersFor(session, spec), "Content-Length": payload.length } : headersFor(session, spec),
         ca: caBundle(),
-        timeout: TIMEOUT_MS,
+        timeout: IDLE_TIMEOUT_MS,
       },
       (res) => {
         const chunks: Buffer[] = [];
+        const length = Number(res.headers["content-length"]);
+        const total = Number.isFinite(length) ? length : undefined;
         let size = 0;
         res.on("data", (chunk: Buffer) => {
           size += chunk.length;
@@ -92,6 +106,7 @@ const send = (session: Session, spec: RequestSpec): Promise<RawResponse> =>
             return;
           }
           chunks.push(chunk);
+          options.onProgress?.(size, total);
         });
         res.on("end", () =>
           resolve({
@@ -103,18 +118,23 @@ const send = (session: Session, spec: RequestSpec): Promise<RawResponse> =>
         res.on("error", reject);
       },
     );
-    req.on("timeout", () => req.destroy(new Error(`nessuna risposta entro ${TIMEOUT_MS / 1000} secondi`)));
+    const deadline = setTimeout(
+      () => req.destroy(new Error(`risposta non completata entro ${deadlineMs / 1000} secondi`)),
+      deadlineMs,
+    );
+    req.on("close", () => clearTimeout(deadline));
+    req.on("timeout", () => req.destroy(new Error(`nessun dato per ${IDLE_TIMEOUT_MS / 1000} secondi`)));
     req.on("error", reject);
     req.end(payload);
   });
 
-const sendWithTlsRecovery = async (session: Session, spec: RequestSpec): Promise<RawResponse> => {
+const sendWithTlsRecovery = async (session: Session, spec: RequestSpec, options: RequestOptions): Promise<RawResponse> => {
   try {
-    return await send(session, spec);
+    return await send(session, spec, options);
   } catch (error) {
     if (!isMissingIntermediateError(error)) throw error;
     if (!(await learnIntermediateFromAia(BDP_HOST))) throw error;
-    return send(session, spec);
+    return send(session, spec, options);
   }
 };
 
@@ -125,10 +145,10 @@ const isAuthFailure = (response: RawResponse): boolean =>
   (response.status >= 300 && response.status < 400) ||
   response.body.subarray(0, 64).toString("utf8").toLowerCase().includes("jwt non presente");
 
-export const request = async (session: Session, spec: RequestSpec): Promise<RawResponse> => {
+export const request = async (session: Session, spec: RequestSpec, options: RequestOptions = {}): Promise<RawResponse> => {
   let response: RawResponse;
   try {
-    response = await throttle.run(() => sendWithTlsRecovery(session, spec));
+    response = await throttle.run(() => sendWithTlsRecovery(session, spec, options));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new BdpError("rete", `Richiesta a ${spec.path} non riuscita: ${reason}`, { cause: error });

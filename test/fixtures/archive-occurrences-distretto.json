@@ -1,0 +1,30 @@
+{
+  "massimaOccurrences": [
+    {
+      "text": "TRIBUNALE DI BOLOGNA",
+      "value": 1637
+    }
+  ],
+  "provvedimentoOccurrences": [
+    {
+      "text": "TRIBUNALE DI BOLOGNA",
+      "value": 132070
+    },
+    {
+      "text": "TRIBUNALE DI MODENA",
+      "value": 80278
+    },
+    {
+      "text": "TRIBUNALE DI REGGIO EMILIA",
+      "value": 49916
+    },
+    {
+      "text": "TRIBUNALE DI RIMINI",
+      "value": 43022
+    },
+    {
+      "text": "TRIBUNALE DI FORLI'",
+      "value": 40772
+    }
+  ]
+}

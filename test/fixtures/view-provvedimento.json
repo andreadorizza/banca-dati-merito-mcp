@@ -1,0 +1,40 @@
+{
+  "data": {
+    "provvedimento": {
+      "count": 1,
+      "items": [
+        {
+          "id": "60a27acdc22865c3d6616c90cfad536e8e28e20e47244591a10c624322825dbf",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI CATANIA",
+          "numero_provvedimento": "1238",
+          "anno_provvedimento": "2019",
+          "numero_ruolo": "00002084",
+          "anno_ruolo": "2018",
+          "sub_procedimento": null,
+          "data": "19/03/2019",
+          "data_pubblicazione": "19/03/2019",
+          "distretto": "CATANIA",
+          "materia": "LAVORO DIPENDENTE DA PRIVATO",
+          "ruolo": "CONTROVERSIE IN MATERIA DI LAVORO, PREV., ASSIST. OBBLIG.",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "ALTRE IPOTESI"
+          ],
+          "riferimento_normativo": [],
+          "esito": null,
+          "stato": null,
+          "annotazione": null,
+          "note": null,
+          "anonymized_document_note": null,
+          "abstract": [],
+          "provvedimento_precedente": null,
+          "provvedimento_successivo": null
+        }
+      ]
+    }
+  }
+}

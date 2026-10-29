@@ -8,7 +8,9 @@ export const areaParam = z
   .min(1)
   .default(DEFAULT_AREA)
   .transform((value) => value.toUpperCase())
-  .describe("Area della Banca Dati. Oggi esiste solo CIVILE.");
+  .describe(
+    "Area della Banca Dati. Le ricerche oggi restituiscono risultati solo in CIVILE; le statistiche contano anche PENALE.",
+  );
 
 export const targetParam = z
   .enum(TARGETS)
@@ -43,31 +45,39 @@ type Estremi = {
   sub_procedimento?: number | string | null | undefined;
 };
 
-const pair = (numero: unknown, anno: unknown): string | null =>
-  numero !== null && numero !== undefined && numero !== "" ? `${numero}${anno ? `/${anno}` : ""}` : null;
+/** BDP zero-pads docket numbers ("00002084"); lawyers write "2084". */
+const unpad = (value: number | string | null | undefined): string =>
+  value === null || value === undefined ? "" : String(value).replace(/^0+(?=\d)/, "");
+
+const pair = (numero: number | string | null | undefined, anno: number | string | null | undefined): string | null => {
+  const n = unpad(numero);
+  if (n === "") return null;
+  const a = unpad(anno);
+  return a === "" ? n : `${n}/${a}`;
+};
 
 /** Number and general-docket reference as lawyers write them: "2571/2025", "7688/2024-1". */
 export const formatEstremi = (item: Estremi): { numero: string | null; rg: string | null } => {
   const rg = pair(item.numero_ruolo, item.anno_ruolo);
+  const sub = unpad(item.sub_procedimento);
   return {
     numero: pair(item.numero_provvedimento, item.anno_provvedimento),
-    rg: rg && item.sub_procedimento ? `${rg}-${item.sub_procedimento}` : rg,
+    rg: rg && sub !== "" ? `${rg}-${sub}` : rg,
   };
 };
 
-/** BDP highlights search hits with HTML; the model reads plain text. */
+const NAMED_ENTITIES: Record<string, string> = { nbsp: " ", quot: '"', apos: "'", lt: "<", gt: ">", amp: "&" };
+
+/** BDP highlights hits with `<mark>` and escapes characters as entities (`&#x2F;`); the model reads plain text. */
 export const cleanSnippet = (html: string): string =>
   html
-    .replace(/<\/?(mark|em|b|strong)>/gi, "**")
+    .replace(/<\/?mark>/gi, "**")
     .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number.parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (entity, name: string) => NAMED_ENTITIES[name.toLowerCase()] ?? entity)
     .replace(/\s+/g, " ")
     .trim();
 
-export const snippets = (value: string | readonly string[] | null | undefined): string[] =>
-  (typeof value === "string" ? [value] : (value ?? [])).map(cleanSnippet).filter((s) => s !== "");
+export const snippets = (value: readonly string[] | null | undefined): string[] =>
+  (value ?? []).map(cleanSnippet).filter((s) => s !== "");

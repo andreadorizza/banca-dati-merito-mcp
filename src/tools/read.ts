@@ -18,6 +18,7 @@ import { ok, run } from "./result.ts";
 
 const DEFAULT_CHUNK = 20_000;
 const MAX_CHUNK = 60_000;
+const PROGRESS_INTERVAL_MS = 2000;
 
 const estremi = (item: Parameters<typeof formatEstremi>[0] & Record<string, unknown>) => ({
   id: item.id,
@@ -190,7 +191,7 @@ export const registerReadTools = (server: McpServer): void => {
       inputSchema: { id: idParam },
       annotations: READ_ONLY,
     },
-    ({ id }) => run(async () => ok(await getTimeline(await requireSession(), id))),
+    ({ id }) => run(async () => ok((await getTimeline(await requireSession(), id)).map(estremi))),
   );
 
   server.registerTool(
@@ -211,9 +212,25 @@ export const registerReadTools = (server: McpServer): void => {
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
-    ({ tipo, id, nome_file }) =>
+    ({ tipo, id, nome_file }, extra) =>
       run(async () => {
-        const pdf = await getDocumento(await requireSession(), tipo, id);
+        // BDP builds PDFs slowly; progress lets clients that support it extend their timeout.
+        const progressToken = extra._meta?.progressToken;
+        let lastSent = 0;
+        const onProgress =
+          progressToken === undefined
+            ? undefined
+            : (received: number, total: number | undefined) => {
+                if (Date.now() - lastSent < PROGRESS_INTERVAL_MS && received !== total) return;
+                lastSent = Date.now();
+                void extra
+                  .sendNotification({
+                    method: "notifications/progress",
+                    params: { progressToken, progress: received, ...(total ? { total } : {}), message: "Scaricamento del PDF" },
+                  })
+                  .catch(() => undefined);
+              };
+        const pdf = await getDocumento(await requireSession(), tipo, id, onProgress);
         const path = await writeUnique(downloadDir(), safeFileName(nome_file ?? `${tipo}-${id.slice(0, 16)}`), pdf);
         return ok({ salvato_in: path, byte: pdf.length });
       }),

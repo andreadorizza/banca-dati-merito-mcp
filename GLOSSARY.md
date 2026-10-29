@@ -38,7 +38,9 @@ indicato.
 : Il distretto di corte d'appello a cui appartiene l'ufficio.
 
 **Area**
-: Il settore della BDP in cui cercare. Oggi esiste solo `CIVILE`.
+: Il settore della BDP in cui cercare: `CIVILE` oppure `PENALE`. Le ricerche oggi
+  restituiscono risultati solo in `CIVILE`; le statistiche della BDP contano anche
+  alcuni provvedimenti penali.
 
 **Criterio**
 : Una condizione di ricerca su un campo della BDP, per esempio ufficio, materia o

@@ -1,0 +1,68 @@
+{
+  "data": {
+    "provvedimento": {
+      "count": 2415,
+      "items": [
+        {
+          "id": "a48e7924f201e59ba52ecaaec6a715c2e821b13053e2c0c9a4df5ea07ef0ffcc",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "CORTE DI APPELLO DI VENEZIA",
+          "numero_provvedimento": "45",
+          "anno_provvedimento": "2025",
+          "numero_ruolo": "00002377",
+          "anno_ruolo": "2021",
+          "sub_procedimento": null,
+          "data": "31/12/2024",
+          "data_pubblicazione": "08/01/2025",
+          "distretto": "VENEZIA",
+          "materia": "DIRITTI REALI - POSSESSO - TRASCRIZIONI",
+          "ruolo": "GENERALE DEGLI AFFARI CIVILI CONTENZIOSI",
+          "presidente": "NOME COGNOME",
+          "relatore": "NOME COGNOME",
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "ALTRI RAPPORTI CONDOMINIALI"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "abstract": []
+        },
+        {
+          "id": "6b9c41ff5c197588e3038de945e391dbb3c7a4bb1e08b2fc1f17c4373c5bc45e",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI ENNA",
+          "numero_provvedimento": "1",
+          "anno_provvedimento": "2025",
+          "numero_ruolo": "00001816",
+          "anno_ruolo": "2017",
+          "sub_procedimento": null,
+          "data": "30/12/2024",
+          "data_pubblicazione": "03/01/2025",
+          "distretto": "CALTANISSETTA",
+          "materia": "DIRITTI REALI - POSSESSO - TRASCRIZIONI (POSSESSO/DIVISIONE)",
+          "ruolo": "GENERALE DEGLI AFFARI CIVILI CONTENZIOSI",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "USUCAPIONE"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [
+            "Testo di esempio con un <mark>termine</mark> evidenziato.",
+            "Testo di esempio con un <mark>termine</mark> evidenziato."
+          ],
+          "abstract": []
+        }
+      ]
+    }
+  }
+}

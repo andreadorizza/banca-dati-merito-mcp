@@ -1,0 +1,46 @@
+{
+  "massimaOccurrences": [
+    {
+      "text": "BOLOGNA",
+      "value": 1637
+    },
+    {
+      "text": "PERUGIA",
+      "value": 1024
+    },
+    {
+      "text": "FIRENZE",
+      "value": 989
+    },
+    {
+      "text": "GENOVA",
+      "value": 223
+    },
+    {
+      "text": "",
+      "value": 90
+    }
+  ],
+  "provvedimentoOccurrences": [
+    {
+      "text": "ROMA",
+      "value": 1475837
+    },
+    {
+      "text": "NAPOLI",
+      "value": 1319811
+    },
+    {
+      "text": "MILANO",
+      "value": 928068
+    },
+    {
+      "text": "BARI",
+      "value": 518873
+    },
+    {
+      "text": "FIRENZE",
+      "value": 507427
+    }
+  ]
+}

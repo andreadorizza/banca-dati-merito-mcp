@@ -1,0 +1,59 @@
+{
+  "data": {
+    "provvedimento": {
+      "count": 10493206,
+      "items": [
+        {
+          "id": "6d6936c29e25998e8791b64ad4c07cda17d377de3cef1db48672bab08e7ea392",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI LOCRI",
+          "numero_provvedimento": "243",
+          "anno_provvedimento": "2023",
+          "numero_ruolo": "00001093",
+          "anno_ruolo": "2022",
+          "sub_procedimento": null,
+          "data": "21/03/2023",
+          "data_pubblicazione": "29/03/2029",
+          "distretto": "REGGIO CALABRIA",
+          "materia": "LAVORO DIPENDENTE DA PRIVATO",
+          "ruolo": "CONTROVERSIE IN MATERIA DI LAVORO, PREV., ASSIST. OBBLIG.",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "LICENZIAMENTO INDIVIDUALE PER GIUST. MOTIVO OGGETTIVO"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [],
+          "abstract": []
+        },
+        {
+          "id": "0b7e389d896f2e8d88263197ccd3c849e2ab8e57cad4f66e95316c65e96cf669",
+          "area": "CIVILE",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI LOCRI",
+          "numero_provvedimento": "243",
+          "anno_provvedimento": "2023",
+          "numero_ruolo": "00001093",
+          "anno_ruolo": "2022",
+          "sub_procedimento": null,
+          "data": "29/03/2023",
+          "data_pubblicazione": "29/03/2029",
+          "distretto": "REGGIO CALABRIA",
+          "materia": "LAVORO DIPENDENTE DA PRIVATO",
+          "ruolo": "CONTROVERSIE IN MATERIA DI LAVORO, PREV., ASSIST. OBBLIG.",
+          "presidente": null,
+          "relatore": null,
+          "giudice_assegnatario_fascicolo": "NOME COGNOME",
+          "parola_chiave": [
+            "LICENZIAMENTO INDIVIDUALE PER GIUST. MOTIVO OGGETTIVO"
+          ],
+          "riferimento_normativo": [],
+          "estratto": [],
+          "abstract": []
+        }
+      ]
+    }
+  }
+}

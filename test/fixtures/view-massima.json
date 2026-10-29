@@ -1,0 +1,51 @@
+{
+  "data": {
+    "massima": {
+      "count": 1,
+      "items": [
+        {
+          "id": "dcdceed09f10ddeace7b6e8425b36a1a89dc85ba2536ab80bbd8888a220e65b2",
+          "area": "CIVILE",
+          "titolo": "Testo di esempio.",
+          "tipo": "SENTENZA",
+          "ufficio": "CORTE DI APPELLO DI FIRENZE",
+          "numero_provvedimento": "2579",
+          "anno_provvedimento": "2022",
+          "numero_ruolo": "00000161",
+          "anno_ruolo": "2020",
+          "sub_procedimento": null,
+          "data": "17/11/2022",
+          "data_pubblicazione": "18/11/2022",
+          "distretto": "FIRENZE",
+          "materia": null,
+          "ruolo": null,
+          "parola_chiave": [
+            "DIRITTO SOCIETARIO",
+            "PROCEDIMENTI ANTE DLGS /",
+            "ALTRI ISTITUTI DI DIRITTO SOCIETARIO"
+          ],
+          "riferimento_normativo": [],
+          "testo": "Testo di esempio.",
+          "esito": null,
+          "annotazione": null,
+          "note": null,
+          "precedente_conforme": [],
+          "precedente_difforme": [],
+          "provvedimento": {
+            "id": "04959c7f457059f06618b1b75b32d78b1195e56cac538019bcc13abb2325343d",
+            "area": "CIVILE",
+            "tipo": "SENTENZA",
+            "ufficio": "CORTE DI APPELLO DI FIRENZE",
+            "numero_provvedimento": "2579",
+            "anno_provvedimento": "2022",
+            "numero_ruolo": "00000161",
+            "anno_ruolo": "2020",
+            "sub_procedimento": null,
+            "data": "17/11/2022",
+            "data_pubblicazione": "18/11/2022"
+          }
+        }
+      ]
+    }
+  }
+}

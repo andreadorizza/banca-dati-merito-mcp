@@ -59,8 +59,8 @@ const AbstractMetadatiSchema = AbstractEstremiSchema.extend({
   riferimento_normativo: textList,
 });
 
-/** Highlighted snippets: BDP returns either one string or a list. */
-const estratto = z.union([z.string(), z.array(z.string())]).nullish();
+/** Highlighted snippets: HTML with `<mark>` around the hits and HTML entities. */
+const estratto = z.array(z.string()).nullish();
 
 export const ProvvedimentoRisultatoSchema = ProvvedimentoMetadatiSchema.extend({
   estratto,
@@ -81,6 +81,15 @@ const NotaSulDocumentoSchema = z.object({
   last_update_date: text,
 });
 
+/**
+ * BDP returned null for every earlier/later ruling we sampled, so whether it sends
+ * one object or a list is unknown; both normalise to a list.
+ */
+const linkedRulings = z
+  .union([ProvvedimentoEstremiSchema, z.array(ProvvedimentoEstremiSchema)])
+  .nullish()
+  .transform((value) => (value === null || value === undefined ? [] : Array.isArray(value) ? value : [value]));
+
 export const ProvvedimentoDettaglioSchema = ProvvedimentoMetadatiSchema.extend({
   esito: text,
   stato: text,
@@ -88,8 +97,8 @@ export const ProvvedimentoDettaglioSchema = ProvvedimentoMetadatiSchema.extend({
   note: text,
   anonymized_document_note: z.array(NotaSulDocumentoSchema).nullish(),
   abstract: z.array(AbstractEstremiSchema).nullish(),
-  provvedimento_precedente: z.array(ProvvedimentoEstremiSchema).nullish(),
-  provvedimento_successivo: z.array(ProvvedimentoEstremiSchema).nullish(),
+  provvedimento_precedente: linkedRulings,
+  provvedimento_successivo: linkedRulings,
 });
 
 export const AbstractDettaglioSchema = AbstractMetadatiSchema.extend({
@@ -118,13 +127,22 @@ export const CartelleSchema = z.object({
   ),
 });
 
+const CartellaContenutoSchema = CartellaRiferimentoSchema.extend({
+  percorso: z.array(CartellaRiferimentoSchema).nullish(),
+  sottocartelle: z.array(CartellaRiferimentoSchema).nullish(),
+  provvedimenti: z.array(ProvvedimentoEstremiSchema.extend({ materia: text, note: text })).nullish(),
+  abstract: z.array(AbstractEstremiSchema.extend({ materia: text, note: text })).nullish(),
+});
+
+/**
+ * Unverified live (the sampled account had no folders): BDP's `fascicolo(id:)`
+ * may return the folder or a one-item list. Both normalise to the folder or null.
+ */
 export const CartellaSchema = z.object({
-  cartella: CartellaRiferimentoSchema.extend({
-    percorso: z.array(CartellaRiferimentoSchema).nullish(),
-    sottocartelle: z.array(CartellaRiferimentoSchema).nullish(),
-    provvedimenti: z.array(ProvvedimentoEstremiSchema.extend({ materia: text, note: text })).nullish(),
-    abstract: z.array(AbstractEstremiSchema.extend({ materia: text, note: text })).nullish(),
-  }).nullable(),
+  cartella: z
+    .union([CartellaContenutoSchema, z.array(CartellaContenutoSchema)])
+    .nullish()
+    .transform((value) => (Array.isArray(value) ? (value.at(0) ?? null) : (value ?? null))),
 });
 
 export const CartelleDiDocumentoSchema = z.object({ cartelle: z.array(CartellaRiferimentoSchema).nullish() });
@@ -136,3 +154,32 @@ export const GraphQlEnvelopeSchema = z.object({
 
 /** `provvedimento/autocomplete` and `massima/autocomplete`. */
 export const SuggerimentiSchema = z.array(z.object({ type: z.string(), text: z.string(), label: z.string() }));
+
+/** `provvedimento/{id}/timeline`: the rulings of the same case, one per instance. */
+export const TimelineSchema = z.array(ProvvedimentoEstremiSchema);
+
+/** `{target}/occurrence/{area}/{field}` and each half of `archive/occurrences`. */
+export const OccorrenzeSchema = z.array(z.object({ text: z.string(), value: z.number() }));
+
+export const ArchivioSchema = z.object({
+  provvedimentoOccurrences: OccorrenzeSchema,
+  massimaOccurrences: OccorrenzeSchema,
+});
+
+/** `materia`, `ruolo`, and the text lookups (`ufficio`, `giudice`, `parola_chiave`, `riferimento_normativo`). */
+export const ValoriSchema = z.array(z.string());
+
+export const GeografiaSchema = z.array(z.object({ ufficio: z.string(), distretto: z.string() }));
+
+export const PubblicazioniSchema = z.array(
+  z.object({
+    ufficio: z.string(),
+    distretto: z.string(),
+    area: z.string(),
+    provvedimento_count: z.number(),
+    massima_count: z.number(),
+  }),
+);
+
+/** Saved searches: BDP stores whatever its front end sent, so the items stay open. */
+export const RicercheSalvateSchema = z.array(z.record(z.string(), z.unknown()));

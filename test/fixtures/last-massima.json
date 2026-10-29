@@ -1,0 +1,68 @@
+{
+  "data": {
+    "massima": {
+      "count": 4013,
+      "items": [
+        {
+          "id": "e848022685707687b51417459d9f8dc6aa41c20602fce96c0444fb21addc7edc",
+          "area": "CIVILE",
+          "titolo": "Testo di esempio.",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI BOLOGNA",
+          "numero_provvedimento": "4352",
+          "anno_provvedimento": "2026",
+          "numero_ruolo": "16320",
+          "anno_ruolo": "2024",
+          "sub_procedimento": "",
+          "data": "20/05/2026",
+          "data_pubblicazione": "25/05/2026",
+          "distretto": "BOLOGNA",
+          "materia": "FAMIGLIA",
+          "ruolo": "GENERALE DEGLI AFFARI CIVILI CONTENZIOSI",
+          "parola_chiave": [
+            "VIOLAZIONE DEI DOVERI CONIUGALI",
+            "ADDEBITO DELLA SEPARAZIONE",
+            "SEPARAZIONE PERSONALE "
+          ],
+          "riferimento_normativo": [
+            "ART. 151 C.C.",
+            "ART. 150 C.C.",
+            "ART. 143 C.C."
+          ],
+          "testo": "Testo di esempio.",
+          "estratto": [],
+          "provvedimento": null
+        },
+        {
+          "id": "04b7903c636086775adda5581e8e2507dfc277c12941626d75197329736faf25",
+          "area": "CIVILE",
+          "titolo": "Testo di esempio.",
+          "tipo": "SENTENZA",
+          "ufficio": "TRIBUNALE DI BOLOGNA",
+          "numero_provvedimento": "4352",
+          "anno_provvedimento": "2026",
+          "numero_ruolo": "16320",
+          "anno_ruolo": "2024",
+          "sub_procedimento": "",
+          "data": "20/05/2026",
+          "data_pubblicazione": "25/05/2026",
+          "distretto": "BOLOGNA",
+          "materia": "FAMIGLIA",
+          "ruolo": "GENERALE DEGLI AFFARI CIVILI CONTENZIOSI",
+          "parola_chiave": [
+            "RESPONSABILITÀ GENITORIALE",
+            "AFFIDAMENTO AI SERVIZI SOCIALI",
+            "AFFIDAMENTO DEI FIGLI"
+          ],
+          "riferimento_normativo": [
+            "ART. 5-BIS L. 184/1983",
+            "ART. 333 C.C."
+          ],
+          "testo": "Testo di esempio.",
+          "estratto": [],
+          "provvedimento": null
+        }
+      ]
+    }
+  }
+}

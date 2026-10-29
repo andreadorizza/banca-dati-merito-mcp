@@ -1,0 +1,37 @@
+[
+  {
+    "ufficio": "TRIBUNALE DI NOVARA",
+    "distretto": "TORINO",
+    "massima_count": 0,
+    "provvedimento_count": 12454,
+    "area": "CIVILE"
+  },
+  {
+    "ufficio": "TRIBUNALE DI PISTOIA",
+    "distretto": "FIRENZE",
+    "massima_count": 0,
+    "provvedimento_count": 16068,
+    "area": "CIVILE"
+  },
+  {
+    "ufficio": "TRIBUNALE DI VALLO DELLA LUCANIA",
+    "distretto": "SALERNO",
+    "massima_count": 0,
+    "provvedimento_count": 13739,
+    "area": "CIVILE"
+  },
+  {
+    "ufficio": "TRIBUNALE DI PESCARA",
+    "distretto": "L'AQUILA",
+    "massima_count": 0,
+    "provvedimento_count": 26326,
+    "area": "CIVILE"
+  },
+  {
+    "ufficio": "TRIBUNALE DI RIETI",
+    "distretto": "ROMA",
+    "massima_count": 0,
+    "provvedimento_count": 13286,
+    "area": "CIVILE"
+  }
+]

@@ -23,7 +23,7 @@ usando **la tua** sessione SPID, CIE, CNS o eIDAS.
 | `leggi_abstract` | Abstract completo con precedenti conformi e difformi |
 | `timeline_provvedimento` | La sequenza dei gradi di giudizio |
 | `scarica_documento` | Salva il PDF in una cartella del tuo computer |
-| `elenca_valori`, `cerca_valori` | Materie, ruoli, uffici, giudici, parole chiave, riferimenti normativi |
+| `elenca_valori`, `elenca_uffici`, `cerca_valori` | Materie, ruoli, uffici per distretto, giudici, parole chiave, riferimenti normativi |
 | `frequenze_parole_chiave`, `pubblicazioni`, `archivio` | Statistiche e navigazione dell'archivio |
 | `cartelle_personali`, `leggi_cartella_personale`, `ricerche_salvate` | La tua area personale, in sola lettura |
 
