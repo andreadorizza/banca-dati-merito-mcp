@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "banca-dati-merito-mcp",
   "display_name": "Banca Dati di Merito (non ufficiale)",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Cerca, legge e cita i provvedimenti civili di merito e gli abstract della Banca Dati di Merito (bdp.giustizia.it) con la propria sessione SPID, CIE o CNS.",
   "long_description": "Server MCP **non ufficiale**, non affiliato al Ministero della Giustizia. Interroga la Banca Dati di Merito con la sessione dell'utente: l'accesso avviene in una finestra di Chrome o Edge con SPID, CIE, CNS o eIDAS, e la sessione resta sul computer. Sola lettura: non crea, modifica né cancella nulla nella Banca Dati.",
   "author": {

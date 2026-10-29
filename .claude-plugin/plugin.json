@@ -1,6 +1,6 @@
 {
   "name": "banca-dati-merito",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Ricerca e lettura della giurisprudenza di merito nella Banca Dati di Merito (bdp.giustizia.it) con la propria sessione SPID, CIE o CNS. Progetto non ufficiale.",
   "author": {
     "name": "Andrea Dorizza",
@@ -24,7 +24,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "banca-dati-merito-mcp@0.1.1"
+        "banca-dati-merito-mcp@0.1.2"
       ]
     }
   }

@@ -80,7 +80,7 @@ Aggiungi il server alla configurazione del client (Cursor, Windsurf, Zed, ecc.):
   "mcpServers": {
     "banca-dati-merito": {
       "command": "npx",
-      "args": ["-y", "banca-dati-merito-mcp@0.1.1"]
+      "args": ["-y", "banca-dati-merito-mcp@0.1.2"]
     }
   }
 }
@@ -89,7 +89,7 @@ Aggiungi il server alla configurazione del client (Cursor, Windsurf, Zed, ecc.):
 Per Codex di OpenAI:
 
 ```
-codex mcp add banca-dati-merito -- npx -y banca-dati-merito-mcp@0.1.1
+codex mcp add banca-dati-merito -- npx -y banca-dati-merito-mcp@0.1.2
 ```
 
 La skill di ricerca è specifica di Claude; negli altri client restano gli strumenti e le
@@ -104,7 +104,7 @@ solito. Le credenziali non passano mai dal server.
 In alternativa, da terminale:
 
 ```
-npx banca-dati-merito-mcp@0.1.1 login
+npx banca-dati-merito-mcp@0.1.2 login
 ```
 
 La sessione dura circa **due ore**. Il browser usa un profilo dedicato, separato dal
@@ -122,7 +122,7 @@ tuo, in cui il salvataggio delle password è disattivato.
 - **Quello che il server legge arriva al modello AI che usi**: testi dei
   provvedimenti, metadati e, se li chiedi, le tue note e cartelle personali. Valuta il
   tuo fornitore AI di conseguenza.
-- Per uscire: `npx banca-dati-merito-mcp@0.1.1 logout` cancella la sessione e il profilo
+- Per uscire: `npx banca-dati-merito-mcp@0.1.2 logout` cancella la sessione e il profilo
   del browser dedicato.
 
 ## Uso responsabile
