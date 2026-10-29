@@ -1,9 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { getCartellaPersonale, getCartellePersonali, getRicercheSalvate } from "../bdp/client.ts";
 import { BdpError } from "../errors.ts";
-import { requireSession } from "../session/status.ts";
 import { formatEstremi, idParam, READ_ONLY, targetParam } from "./common.ts";
-import { ok, run } from "./result.ts";
+import { ok, withBdp } from "./result.ts";
 
 export const registerPersonalTools = (server: McpServer): void => {
   server.registerTool(
@@ -15,7 +14,7 @@ export const registerPersonalTools = (server: McpServer): void => {
       inputSchema: {},
       annotations: READ_ONLY,
     },
-    () => run(async () => ok(await getCartellePersonali(await requireSession()))),
+    (_args, { signal }) => withBdp(signal, async (ctx) => ok(await getCartellePersonali(ctx))),
   );
 
   server.registerTool(
@@ -27,9 +26,9 @@ export const registerPersonalTools = (server: McpServer): void => {
       inputSchema: { id: idParam },
       annotations: READ_ONLY,
     },
-    ({ id }) =>
-      run(async () => {
-        const cartella = await getCartellaPersonale(await requireSession(), id);
+    ({ id }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const cartella = await getCartellaPersonale(ctx, id);
         if (!cartella) throw new BdpError("parametri", `Nessuna cartella personale con id ${id}.`);
         return ok({
           id: cartella.id,
@@ -65,6 +64,6 @@ export const registerPersonalTools = (server: McpServer): void => {
       inputSchema: { tipo: targetParam.default("provvedimenti") },
       annotations: READ_ONLY,
     },
-    ({ tipo }) => run(async () => ok(await getRicercheSalvate(await requireSession(), tipo))),
+    ({ tipo }, { signal }) => withBdp(signal, async (ctx) => ok(await getRicercheSalvate(ctx, tipo))),
   );
 };

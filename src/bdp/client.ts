@@ -34,6 +34,9 @@ import {
   ValoriSchema,
 } from "./schemas.ts";
 
+/** What every BDP call needs: the user's session and the MCP request's cancellation signal. */
+export type BdpContext = { session: Session; signal?: AbortSignal | undefined };
+
 /** BDP's REST paths name the abstract `massima`. */
 const REST_TARGET = { provvedimenti: "provvedimento", abstract: "massima" } as const satisfies Record<Target, string>;
 
@@ -47,12 +50,8 @@ const parse = <T extends z.ZodType>(schema: T, value: unknown, what: string): z.
   return parsed.data;
 };
 
-const getJson = async <T extends z.ZodType>(
-  session: Session,
-  spec: Extract<RequestSpec, { method: "GET" }> | Extract<RequestSpec, { method: "POST" }>,
-  schema: T,
-): Promise<z.infer<T>> => {
-  const response = await request(session, spec);
+const getJson = async <T extends z.ZodType>(ctx: BdpContext, spec: RequestSpec, schema: T): Promise<z.infer<T>> => {
+  const response = await request(ctx.session, spec, { signal: ctx.signal });
   let body: unknown;
   try {
     body = JSON.parse(response.body.toString("utf8"));
@@ -63,12 +62,12 @@ const getJson = async <T extends z.ZodType>(
 };
 
 const graphql = async <T extends z.ZodType>(
-  session: Session,
+  ctx: BdpContext,
   query: string,
   variables: Record<string, unknown>,
   schema: T,
 ): Promise<z.infer<T>> => {
-  const envelope = await getJson(session, { method: "POST", path: "graphql", json: { query, variables } }, GraphQlEnvelopeSchema);
+  const envelope = await getJson(ctx, { method: "POST", path: "graphql", json: { query, variables } }, GraphQlEnvelopeSchema);
   if (envelope.errors && envelope.errors.length > 0) {
     throw new BdpError("http", `Errore GraphQL della Banca Dati: ${envelope.errors.map((e) => e.message).join("; ")}`);
   }
@@ -111,10 +110,10 @@ const searchVariables = (params: SearchParams, withQuery: boolean): Record<strin
 const hasFilters = (params: SearchParams): boolean =>
   params.q !== "" || params.soloCartellePersonali || Boolean(params.notePersonali);
 
-export const searchProvvedimenti = async (session: Session, params: SearchParams) => {
+export const searchProvvedimenti = async (ctx: BdpContext, params: SearchParams) => {
   const withQuery = hasFilters(params);
   const data = await graphql(
-    session,
+    ctx,
     searchProvvedimentiDocument(withQuery),
     searchVariables(params, withQuery),
     z.object({ provvedimento: pageOf(ProvvedimentoRisultatoSchema) }),
@@ -122,10 +121,10 @@ export const searchProvvedimenti = async (session: Session, params: SearchParams
   return data.provvedimento;
 };
 
-export const searchAbstract = async (session: Session, params: SearchParams) => {
+export const searchAbstract = async (ctx: BdpContext, params: SearchParams) => {
   const withQuery = hasFilters(params);
   const data = await graphql(
-    session,
+    ctx,
     searchAbstractDocument(withQuery),
     searchVariables(params, withQuery),
     z.object({ massima: pageOf(AbstractRisultatoSchema) }),
@@ -133,36 +132,60 @@ export const searchAbstract = async (session: Session, params: SearchParams) => 
   return data.massima;
 };
 
-export const getProvvedimento = async (session: Session, id: string, area = DEFAULT_AREA) => {
-  const data = await graphql(
-    session,
-    VIEW_PROVVEDIMENTO,
-    { id: [id], area },
-    z.object({ provvedimento: pageOf(ProvvedimentoDettaglioSchema) }),
-  );
+export const getProvvedimento = async (ctx: BdpContext, id: string, area = DEFAULT_AREA) => {
+  const data = await graphql(ctx, VIEW_PROVVEDIMENTO, { id: [id], area }, z.object({ provvedimento: pageOf(ProvvedimentoDettaglioSchema) }));
   return data.provvedimento.items.at(0) ?? null;
 };
 
-export const getAbstract = async (session: Session, id: string, area = DEFAULT_AREA) => {
-  const data = await graphql(session, VIEW_ABSTRACT, { id: [id], area }, z.object({ massima: pageOf(AbstractDettaglioSchema) }));
+export const getAbstract = async (ctx: BdpContext, id: string, area = DEFAULT_AREA) => {
+  const data = await graphql(ctx, VIEW_ABSTRACT, { id: [id], area }, z.object({ massima: pageOf(AbstractDettaglioSchema) }));
   return data.massima.items.at(0) ?? null;
 };
 
-export const getTestoProvvedimento = async (session: Session, id: string): Promise<string> => {
-  const response = await request(session, { method: "GET", path: `provvedimento/${encodeURIComponent(id)}/document/testo` });
-  return response.body.toString("utf8");
+const TEXT_CACHE_SIZE = 5;
+const TEXT_CACHE_TTL_MS = 10 * 60 * 1000;
+/**
+ * Long decisions are read in chunks, one tool call each; without this cache every
+ * chunk would download the whole text from BDP again.
+ */
+const textCache = new Map<string, { text: string; at: number }>();
+
+export const getTestoProvvedimento = async (ctx: BdpContext, id: string): Promise<string> => {
+  const cached = textCache.get(id);
+  if (cached && Date.now() - cached.at < TEXT_CACHE_TTL_MS) return cached.text;
+  const response = await request(
+    ctx.session,
+    { method: "GET", path: `provvedimento/${encodeURIComponent(id)}/document/testo` },
+    { signal: ctx.signal },
+  );
+  const text = response.body.toString("utf8");
+  if (!response.contentType.startsWith("text/plain") || text.trim() === "") {
+    throw new BdpError(
+      "risposta_inattesa",
+      `Il testo del provvedimento ${id} non è disponibile (${response.contentType || "senza tipo"}, ${response.body.length} byte).`,
+    );
+  }
+  textCache.delete(id);
+  textCache.set(id, { text, at: Date.now() });
+  for (const key of textCache.keys()) {
+    if (textCache.size <= TEXT_CACHE_SIZE) break;
+    textCache.delete(key);
+  }
+  return text;
 };
 
 export const getDocumento = async (
-  session: Session,
+  ctx: BdpContext,
   target: Target,
   id: string,
   onProgress?: RequestOptions["onProgress"],
 ): Promise<Buffer> => {
+  const options: RequestOptions = { deadlineMs: DOCUMENT_DEADLINE_MS, signal: ctx.signal };
+  if (onProgress) options.onProgress = onProgress;
   const response = await request(
-    session,
+    ctx.session,
     { method: "GET", path: `${REST_TARGET[target]}/${encodeURIComponent(id)}/document`, accept: "application/pdf" },
-    onProgress ? { deadlineMs: DOCUMENT_DEADLINE_MS, onProgress } : { deadlineMs: DOCUMENT_DEADLINE_MS },
+    options,
   );
   if (!response.contentType.includes("pdf")) {
     throw new BdpError("risposta_inattesa", `Il documento richiesto non è un PDF (${response.contentType}).`);
@@ -170,19 +193,19 @@ export const getDocumento = async (
   return response.body;
 };
 
-export const getTimeline = (session: Session, id: string) =>
-  getJson(session, { method: "GET", path: `provvedimento/${encodeURIComponent(id)}/timeline` }, TimelineSchema);
+export const getTimeline = (ctx: BdpContext, id: string) =>
+  getJson(ctx, { method: "GET", path: `provvedimento/${encodeURIComponent(id)}/timeline` }, TimelineSchema);
 
-export const suggest = (session: Session, target: Target, text: string, area: string) =>
+export const suggest = (ctx: BdpContext, target: Target, text: string, area: string) =>
   getJson(
-    session,
+    ctx,
     { method: "GET", path: `${REST_TARGET[target]}/autocomplete`, query: { q: text.toUpperCase(), area } },
     SuggerimentiSchema,
   );
 
-export const getOccorrenze = (session: Session, target: Target, area: string, campo: string) =>
+export const getOccorrenze = (ctx: BdpContext, target: Target, area: string, campo: string) =>
   getJson(
-    session,
+    ctx,
     { method: "GET", path: `${REST_TARGET[target]}/occurrence/${encodeURIComponent(area)}/${encodeURIComponent(campo)}` },
     OccorrenzeSchema,
   );
@@ -190,12 +213,11 @@ export const getOccorrenze = (session: Session, target: Target, area: string, ca
 export const LIST_KEYS = ["materia", "ruolo"] as const;
 export type ListSource = (typeof LIST_KEYS)[number];
 
-export const listValues = (session: Session, source: ListSource, area: string) =>
-  getJson(session, { method: "GET", path: source, query: { area } }, ValoriSchema);
+export const listValues = (ctx: BdpContext, source: ListSource, area: string) =>
+  getJson(ctx, { method: "GET", path: source, query: { area } }, ValoriSchema);
 
 /** Every court office with its district; BDP's own front end caches this list. */
-export const getGeografia = (session: Session) =>
-  getJson(session, { method: "GET", path: "ufficio/geografia" }, GeografiaSchema);
+export const getGeografia = (ctx: BdpContext) => getJson(ctx, { method: "GET", path: "ufficio/geografia" }, GeografiaSchema);
 
 export const LOOKUP_KEYS = ["ufficio", "giudice", "parola_chiave", "riferimento_normativo"] as const;
 export type LookupSource = (typeof LOOKUP_KEYS)[number];
@@ -207,13 +229,13 @@ const LOOKUP_SOURCES = {
   riferimento_normativo: { path: "riferimento_normativo", needsArea: false },
 } as const satisfies Record<LookupSource, { path: string; needsArea: boolean }>;
 
-export const lookupValues = (session: Session, source: LookupSource, text: string, area: string) => {
+export const lookupValues = (ctx: BdpContext, source: LookupSource, text: string, area: string) => {
   const { path, needsArea } = LOOKUP_SOURCES[source];
-  return getJson(session, { method: "GET", path, query: needsArea ? { q: text, area } : { q: text } }, ValoriSchema);
+  return getJson(ctx, { method: "GET", path, query: needsArea ? { q: text, area } : { q: text } }, ValoriSchema);
 };
 
-export const getPubblicazioni = (session: Session) =>
-  getJson(session, { method: "GET", path: "monitor/published" }, PubblicazioniSchema);
+export const getPubblicazioni = (ctx: BdpContext) =>
+  getJson(ctx, { method: "GET", path: "monitor/published" }, PubblicazioniSchema);
 
 export type ArchivioParams = {
   area: string;
@@ -224,22 +246,22 @@ export type ArchivioParams = {
   mese?: string | undefined;
 };
 
-export const getArchivio = (session: Session, params: ArchivioParams) =>
-  getJson(session, { method: "POST", path: "archive/occurrences", json: params }, ArchivioSchema);
+export const getArchivio = (ctx: BdpContext, params: ArchivioParams) =>
+  getJson(ctx, { method: "POST", path: "archive/occurrences", json: params }, ArchivioSchema);
 
-export const getRicercheSalvate = (session: Session, target: Target) =>
-  getJson(session, { method: "GET", path: `${REST_TARGET[target]}/filter` }, RicercheSalvateSchema);
+export const getRicercheSalvate = (ctx: BdpContext, target: Target) =>
+  getJson(ctx, { method: "GET", path: `${REST_TARGET[target]}/filter` }, RicercheSalvateSchema);
 
-export const getCartellePersonali = async (session: Session) =>
-  (await graphql(session, CARTELLE_PERSONALI, {}, CartelleSchema)).cartelle;
+export const getCartellePersonali = async (ctx: BdpContext) =>
+  (await graphql(ctx, CARTELLE_PERSONALI, {}, CartelleSchema)).cartelle;
 
-export const getCartellaPersonale = async (session: Session, id: string) =>
-  (await graphql(session, CARTELLA_PERSONALE, { id }, CartellaSchema)).cartella;
+export const getCartellaPersonale = async (ctx: BdpContext, id: string) =>
+  (await graphql(ctx, CARTELLA_PERSONALE, { id }, CartellaSchema)).cartella;
 
-export const getCartelleDelDocumento = async (session: Session, target: Target, id: string) => {
+export const getCartelleDelDocumento = async (ctx: BdpContext, target: Target, id: string) => {
   const result =
     target === "provvedimenti"
-      ? await graphql(session, CARTELLE_DEL_PROVVEDIMENTO, { provvedimento_id: id }, CartelleDiDocumentoSchema)
-      : await graphql(session, CARTELLE_DELL_ABSTRACT, { massima_id: id }, CartelleDiDocumentoSchema);
+      ? await graphql(ctx, CARTELLE_DEL_PROVVEDIMENTO, { provvedimento_id: id }, CartelleDiDocumentoSchema)
+      : await graphql(ctx, CARTELLE_DELL_ABSTRACT, { massima_id: id }, CartelleDiDocumentoSchema);
   return result.cartelle ?? [];
 };

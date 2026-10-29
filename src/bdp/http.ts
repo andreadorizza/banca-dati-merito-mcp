@@ -19,7 +19,11 @@ export type RequestOptions = {
    */
   deadlineMs?: number;
   onProgress?: (received: number, total: number | undefined) => void;
+  /** The MCP request's signal: a cancelled call leaves the queue and closes its socket. */
+  signal?: AbortSignal | undefined;
 };
+
+const cancelled = (): BdpError => new BdpError("annullata", "Richiesta annullata.");
 
 const IDLE_TIMEOUT_MS = 40_000;
 const DEFAULT_DEADLINE_MS = 60_000;
@@ -122,7 +126,14 @@ const send = (session: Session, spec: RequestSpec, options: RequestOptions): Pro
       () => req.destroy(new Error(`risposta non completata entro ${deadlineMs / 1000} secondi`)),
       deadlineMs,
     );
-    req.on("close", () => clearTimeout(deadline));
+    const abort = (): void => {
+      req.destroy(cancelled());
+    };
+    options.signal?.addEventListener("abort", abort, { once: true });
+    req.on("close", () => {
+      clearTimeout(deadline);
+      options.signal?.removeEventListener("abort", abort);
+    });
     req.on("timeout", () => req.destroy(new Error(`nessun dato per ${IDLE_TIMEOUT_MS / 1000} secondi`)));
     req.on("error", reject);
     req.end(payload);
@@ -148,8 +159,13 @@ const isAuthFailure = (response: RawResponse): boolean =>
 export const request = async (session: Session, spec: RequestSpec, options: RequestOptions = {}): Promise<RawResponse> => {
   let response: RawResponse;
   try {
-    response = await throttle.run(() => sendWithTlsRecovery(session, spec, options));
+    response = await throttle.run(() => {
+      // A call cancelled while it waited in the queue never reaches BDP.
+      if (options.signal?.aborted) throw cancelled();
+      return sendWithTlsRecovery(session, spec, options);
+    });
   } catch (error) {
+    if (error instanceof BdpError) throw error;
     const reason = error instanceof Error ? error.message : String(error);
     throw new BdpError("rete", `Richiesta a ${spec.path} non riuscita: ${reason}`, { cause: error });
   }

@@ -1,4 +1,5 @@
-import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { chmod, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { z } from "zod";
 import { API_PATH, BDP_HOST, sessionFile } from "../config.ts";
@@ -32,6 +33,9 @@ const SessionSchema = z.object({
 
 export type Session = z.infer<typeof SessionSchema>;
 
+const invalidSessionFile = (cause: unknown): BdpError =>
+  new BdpError("sessione_assente", `Il file di sessione ${sessionFile()} non è leggibile.`, { cause });
+
 export const loadSession = async (): Promise<Session | null> => {
   let raw: string;
   try {
@@ -40,24 +44,34 @@ export const loadSession = async (): Promise<Session | null> => {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") return null;
     throw error;
   }
-  const parsed = SessionSchema.safeParse(JSON.parse(raw));
-  if (!parsed.success) {
-    throw new BdpError(
-      "sessione_assente",
-      `Il file di sessione ${sessionFile()} non è valido. Ripeti l'accesso con \`accedi\`.`,
-      { cause: parsed.error },
-    );
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (error) {
+    throw invalidSessionFile(error);
   }
+  const parsed = SessionSchema.safeParse(json);
+  if (!parsed.success) throw invalidSessionFile(parsed.error);
   return parsed.data;
 };
 
+/**
+ * Written to a private temporary file and renamed into place, so a crash or a
+ * second app saving at the same moment never leaves a truncated session file.
+ */
 export const saveSession = async (session: Session): Promise<void> => {
   const file = sessionFile();
   await mkdir(dirname(file), { recursive: true, mode: 0o700 });
-  await writeFile(file, `${JSON.stringify(session, null, 2)}\n`, { mode: 0o600 });
-  // `mode` applies only on creation; enforce it on an existing file too.
-  // On Windows this is a no-op, and the per-user %APPDATA% ACL protects the file.
-  await chmod(file, 0o600);
+  const temp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+  try {
+    await writeFile(temp, `${JSON.stringify(session, null, 2)}\n`, { mode: 0o600, flag: "wx" });
+    // `mode` is filtered by the umask; enforce it before the file becomes visible.
+    // On Windows this is a no-op, and the per-user %APPDATA% ACL protects the file.
+    await chmod(temp, 0o600);
+    await rename(temp, file);
+  } finally {
+    await rm(temp, { force: true });
+  }
 };
 
 export const clearSession = async (): Promise<void> => {

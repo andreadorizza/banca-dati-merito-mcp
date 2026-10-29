@@ -17,13 +17,20 @@
   "support": "https://github.com/andreadorizza/banca-dati-merito-mcp/issues",
   "icon": "icon.png",
   "license": "Apache-2.0",
-  "keywords": ["giurisprudenza", "banca dati di merito", "legal", "italia"],
+  "keywords": [
+    "giurisprudenza",
+    "banca dati di merito",
+    "legal",
+    "italia"
+  ],
   "server": {
     "type": "node",
     "entry_point": "dist/cli.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/cli.js"],
+      "args": [
+        "${__dirname}/dist/cli.js"
+      ],
       "env": {
         "BDM_DOWNLOAD_DIR": "${user_config.download_dir}",
         "BDM_MIN_INTERVAL_MS": "${user_config.min_interval_ms}"
@@ -47,28 +54,91 @@
     }
   },
   "tools": [
-    { "name": "stato_sessione", "description": "Controlla la sessione con la Banca Dati e quando scade." },
-    { "name": "accedi", "description": "Apre il browser per l'accesso con SPID, CIE, CNS o eIDAS." },
-    { "name": "risolvi_criteri", "description": "Trasforma un nome nei criteri esatti della Banca Dati." },
-    { "name": "cerca_provvedimenti", "description": "Cerca sentenze, ordinanze e decreti per testo, criteri e date." },
-    { "name": "cerca_abstract", "description": "Cerca gli abstract, le sintesi dei principi affermati." },
-    { "name": "leggi_provvedimento", "description": "Metadati completi di un provvedimento." },
-    { "name": "leggi_testo_provvedimento", "description": "Testo integrale pseudonimizzato, a blocchi." },
-    { "name": "leggi_abstract", "description": "Abstract completo con precedenti conformi e difformi." },
-    { "name": "timeline_provvedimento", "description": "Gradi di giudizio collegati a un provvedimento." },
-    { "name": "scarica_documento", "description": "Salva il PDF di un provvedimento o di un abstract." },
-    { "name": "elenca_valori", "description": "Tutte le materie o tutti i ruoli, nella forma esatta." },
-    { "name": "elenca_uffici", "description": "Uffici giudiziari raggruppati per distretto." },
-    { "name": "cerca_valori", "description": "Cerca uffici, giudici, parole chiave e riferimenti normativi." },
-    { "name": "frequenze_parole_chiave", "description": "Le parole chiave più usate." },
-    { "name": "pubblicazioni", "description": "Quanto ha pubblicato la Banca Dati, per distretto e ufficio." },
-    { "name": "archivio", "description": "Conteggi dell'archivio per distretto, ufficio e periodo." },
-    { "name": "cartelle_personali", "description": "Le cartelle personali dell'utente (sola lettura)." },
-    { "name": "leggi_cartella_personale", "description": "Il contenuto di una cartella personale." },
-    { "name": "ricerche_salvate", "description": "Le ricerche salvate dall'utente." }
+    {
+      "name": "stato_sessione",
+      "description": "Controlla la sessione con la Banca Dati e quando scade."
+    },
+    {
+      "name": "accedi",
+      "description": "Apre il browser per l'accesso con SPID, CIE, CNS o eIDAS."
+    },
+    {
+      "name": "risolvi_criteri",
+      "description": "Trasforma un nome nei criteri esatti della Banca Dati."
+    },
+    {
+      "name": "cerca_provvedimenti",
+      "description": "Cerca sentenze, ordinanze e decreti per testo, criteri e date."
+    },
+    {
+      "name": "cerca_abstract",
+      "description": "Cerca gli abstract, le sintesi dei principi affermati."
+    },
+    {
+      "name": "leggi_provvedimento",
+      "description": "Metadati completi di un provvedimento."
+    },
+    {
+      "name": "leggi_testo_provvedimento",
+      "description": "Testo integrale pseudonimizzato, a blocchi."
+    },
+    {
+      "name": "leggi_abstract",
+      "description": "Abstract completo con precedenti conformi e difformi."
+    },
+    {
+      "name": "timeline_provvedimento",
+      "description": "Gradi di giudizio collegati a un provvedimento."
+    },
+    {
+      "name": "scarica_documento",
+      "description": "Salva il PDF di un provvedimento o di un abstract."
+    },
+    {
+      "name": "elenca_valori",
+      "description": "Tutte le materie o tutti i ruoli, nella forma esatta."
+    },
+    {
+      "name": "elenca_uffici",
+      "description": "Uffici giudiziari raggruppati per distretto."
+    },
+    {
+      "name": "cerca_valori",
+      "description": "Cerca uffici, giudici, parole chiave e riferimenti normativi."
+    },
+    {
+      "name": "frequenze_parole_chiave",
+      "description": "Le parole chiave più usate."
+    },
+    {
+      "name": "pubblicazioni",
+      "description": "Quanto ha pubblicato la Banca Dati, per distretto e ufficio."
+    },
+    {
+      "name": "archivio",
+      "description": "Conteggi dell'archivio per distretto, ufficio e periodo."
+    },
+    {
+      "name": "cartelle_personali",
+      "description": "Le cartelle personali dell'utente (sola lettura)."
+    },
+    {
+      "name": "leggi_cartella_personale",
+      "description": "Il contenuto di una cartella personale."
+    },
+    {
+      "name": "ricerche_salvate",
+      "description": "Le ricerche salvate dall'utente."
+    }
   ],
   "compatibility": {
-    "platforms": ["darwin", "win32", "linux"],
-    "runtimes": { "node": ">=20.0.0" }
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.0.0"
+    }
   }
 }

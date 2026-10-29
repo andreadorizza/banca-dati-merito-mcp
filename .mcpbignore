@@ -1,0 +1,10 @@
+src/
+test/
+scripts/
+docs/
+assets/
+skills/
+.github/
+.claude-plugin/
+*.mcpb
+tsconfig*.json

@@ -35,7 +35,7 @@ citazione ([`skills/ricerca-banca-dati-merito`](skills/ricerca-banca-dati-merito
 
 - Un'identità digitale con cui accedi alla Banca Dati: SPID, CIE, CNS o eIDAS.
 - Google Chrome o Microsoft Edge, per la finestra di accesso.
-- Node.js 20 o successivo, solo per Claude Code e gli altri client (Claude Desktop ha
+- Node.js 22 o successivo, solo per Claude Code e gli altri client (Claude Desktop ha
   già il suo).
 
 ## Installazione
@@ -65,7 +65,7 @@ Aggiungi il server alla configurazione del client (Cursor, Windsurf, Zed, ecc.):
   "mcpServers": {
     "banca-dati-merito": {
       "command": "npx",
-      "args": ["-y", "banca-dati-merito-mcp"]
+      "args": ["-y", "banca-dati-merito-mcp@0.1.0"]
     }
   }
 }
@@ -80,11 +80,11 @@ solito. Le credenziali non passano mai dal server.
 In alternativa, da terminale:
 
 ```
-npx banca-dati-merito-mcp login
+npx banca-dati-merito-mcp@0.1.0 login
 ```
 
 La sessione dura circa **due ore**. Il browser usa un profilo dedicato, separato dal
-tuo, così a volte il rinnovo non richiede di ripetere l'autenticazione.
+tuo, in cui il salvataggio delle password è disattivato.
 
 ## Privacy e sicurezza
 
@@ -92,18 +92,21 @@ tuo, così a volte il rinnovo non richiede di ripetere l'autenticazione.
   `~/Library/Application Support/banca-dati-merito-mcp/` su macOS,
   `%APPDATA%\banca-dati-merito-mcp\` su Windows, `~/.config/banca-dati-merito-mcp/`
   su Linux. Il server non ha componenti remoti e non contatta altri servizi oltre alla
-  Banca Dati ([ADR 0001](docs/adr/0001-sessione-solo-locale.md)).
+  Banca Dati ([ADR 0001](docs/adr/0001-sessione-solo-locale.md)). Unica eccezione: se la
+  Banca Dati cambia certificato, il server può scaricare il certificato intermedio dal
+  server dell'autorità di certificazione indicato nel certificato stesso.
 - **Quello che il server legge arriva al modello AI che usi**: testi dei
   provvedimenti, metadati e, se li chiedi, le tue note e cartelle personali. Valuta il
   tuo fornitore AI di conseguenza.
-- Per uscire: `npx banca-dati-merito-mcp logout` (aggiungi `--profilo` per cancellare
-  anche il profilo del browser dedicato).
+- Per uscire: `npx banca-dati-merito-mcp@0.1.0 logout` cancella la sessione e il profilo
+  del browser dedicato.
 
 ## Uso responsabile
 
 La Banca Dati è pensata per la consultazione individuale. Il server lo rispetta:
 
-- **una richiesta alla volta**, con almeno un secondo tra l'una e l'altra;
+- **una richiesta alla volta** per ogni app che usa il server, con almeno un secondo tra
+  l'una e l'altra; una richiesta annullata dal client non parte;
 - **al massimo 50 risultati** per chiamata (20 di norma);
 - **nessuno strumento di download massivo**.
 
@@ -141,7 +144,7 @@ progetto.
 
 ```
 npm install
-npm run check      # typecheck e test (Node 22.18+ per i test)
+npm run check      # typecheck e test (Node 22.18+)
 npm run build
 ```
 

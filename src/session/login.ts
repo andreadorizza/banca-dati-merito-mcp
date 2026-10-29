@@ -1,4 +1,5 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { BrowserContext, Request } from "playwright-core";
 import { z } from "zod";
 import { API_PATH, BDP_ORIGIN, browserProfileDir, LOGIN_URL } from "../config.ts";
@@ -30,18 +31,62 @@ let running: Promise<Session> | null = null;
 
 export const loginState = (): LoginState => state;
 
+/**
+ * Playwright's test-harness defaults that weaken a browser where people sign in
+ * with SPID or CIE: a fixed key instead of the OS keychain for the profile's
+ * cookies and passwords, and no phishing protection or security component updates.
+ */
+const UNSAFE_DEFAULT_ARGS = [
+  "--use-mock-keychain",
+  "--password-store=basic",
+  "--disable-client-side-phishing-detection",
+  "--disable-component-update",
+];
+
+/** Chrome must not offer to save the identity-provider password in this profile. */
+const disablePasswordSaving = async (profile: string): Promise<void> => {
+  const file = join(profile, "Default", "Preferences");
+  let prefs: Record<string, unknown> = {};
+  try {
+    const parsed: unknown = JSON.parse(await readFile(file, "utf8"));
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) prefs = { ...parsed };
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+  }
+  const profilePrefs = prefs.profile !== null && typeof prefs.profile === "object" ? prefs.profile : {};
+  prefs.credentials_enable_service = false;
+  prefs.profile = { ...profilePrefs, password_manager_enabled: false };
+  await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+  await writeFile(file, JSON.stringify(prefs), { mode: 0o600 });
+};
+
+const PROFILE_IN_USE = /ProcessSingleton|SingletonLock|already running|existing browser session/i;
+
 const launch = async (): Promise<BrowserContext> => {
   const { chromium } = await import("playwright-core");
   const profile = browserProfileDir();
   await mkdir(profile, { recursive: true, mode: 0o700 });
+  await disablePasswordSaving(profile);
   const failures: string[] = [];
   for (const channel of BROWSER_CHANNELS) {
     try {
-      // A dedicated persistent profile: separate from the user's own browsing, and
-      // it keeps the identity provider's sign-in between logins.
-      return await chromium.launchPersistentContext(profile, { channel, headless: false, viewport: null });
+      // A dedicated persistent profile, separate from the user's own browsing.
+      return await chromium.launchPersistentContext(profile, {
+        channel,
+        headless: false,
+        viewport: null,
+        ignoreDefaultArgs: UNSAFE_DEFAULT_ARGS,
+      });
     } catch (error) {
-      failures.push(`${channel}: ${error instanceof Error ? error.message.split("\n")[0] : String(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      if (PROFILE_IN_USE.test(message)) {
+        throw new BdpError(
+          "login_fallito",
+          "Un'altra finestra di accesso è già aperta (forse da un'altra app che usa questo server). Completa l'accesso lì, oppure chiudila e riprova.",
+          { cause: error },
+        );
+      }
+      failures.push(`${channel}: ${message.split("\n")[0]}`);
     }
   }
   throw new BdpError(
@@ -97,12 +142,16 @@ const captureBrowserHeaders = async (
   context: BrowserContext,
 ): Promise<{ userAgent: string; clientHints: Record<string, string> }> => {
   const page = context.pages()[0] ?? (await context.newPage());
-  const apiRequest = context.waitForEvent("request", {
-    predicate: (req: Request) => req.url().startsWith(`${BDP_ORIGIN}${API_PATH}/`),
-    timeout: 30_000,
-  });
-  await page.goto(`${BDP_ORIGIN}/`, { waitUntil: "domcontentloaded" });
-  const headers = await (await apiRequest).allHeaders();
+  // Awaited together: if the navigation fails, the pending wait must not be left
+  // to reject unhandled when the context closes (that would kill the MCP server).
+  const [apiRequest] = await Promise.all([
+    context.waitForEvent("request", {
+      predicate: (req: Request) => req.url().startsWith(`${BDP_ORIGIN}${API_PATH}/`),
+      timeout: 30_000,
+    }),
+    page.goto(`${BDP_ORIGIN}/`, { waitUntil: "domcontentloaded" }),
+  ]);
+  const headers = await apiRequest.allHeaders();
   const userAgent = headers["user-agent"];
   if (!userAgent) throw new BdpError("login_fallito", "Il browser non ha inviato uno User-Agent.");
   const clientHints: Record<string, string> = {};

@@ -5,6 +5,8 @@
  * criteria so the model never writes the syntax by hand.
  */
 
+import { BdpError } from "../errors.ts";
+
 export const TARGETS = ["provvedimenti", "abstract"] as const;
 export type Target = (typeof TARGETS)[number];
 
@@ -65,11 +67,11 @@ const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 /** YYYY-MM-DD (what models produce reliably) to BDP's DD/MM/YYYY. */
 export const toBdpDate = (iso: string): string => {
   const match = ISO_DATE.exec(iso);
-  if (!match) throw new RangeError(`Data non valida (atteso AAAA-MM-GG): ${iso}`);
+  if (!match) throw new BdpError("parametri", `Data non valida (atteso AAAA-MM-GG): ${iso}`);
   const [, year, month, day] = match;
   const parsed = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== iso) {
-    throw new RangeError(`Data inesistente: ${iso}`);
+    throw new BdpError("parametri", `Data inesistente: ${iso}`);
   }
   return `${day}/${month}/${year}`;
 };
@@ -101,11 +103,15 @@ export const buildQuery = <F extends string>(target: Target, input: QueryInput<F
   if (input.date && (input.date.da || input.date.a)) {
     const from = input.date.da ? toBdpDate(input.date.da) : EARLIEST;
     const to = toBdpDate(input.date.a ?? today());
+    // ISO dates compare correctly as strings; an inverted range would silently match nothing.
+    if (input.date.da && input.date.da > (input.date.a ?? today())) {
+      throw new BdpError("parametri", `Intervallo di date invertito: da ${input.date.da} a ${input.date.a ?? "oggi"}.`);
+    }
     positive.push(`${input.date.campo}:[${from} TO ${to}]`);
   }
   const negative = (input.escludi ?? []).map(({ campo, valore }) => `NOT ${clause(campo, valore)}`);
   if (positive.length === 0 && negative.length > 0) {
-    throw new RangeError("Le esclusioni richiedono almeno un criterio, un testo o un intervallo di date.");
+    throw new BdpError("parametri", "Le esclusioni richiedono almeno un criterio, un testo o un intervallo di date.");
   }
   return [...positive, ...negative].join(" AND ");
 };

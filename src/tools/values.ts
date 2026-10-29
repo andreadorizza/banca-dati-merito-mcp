@@ -10,9 +10,9 @@ import {
   LOOKUP_KEYS,
   lookupValues,
 } from "../bdp/client.ts";
-import { requireSession } from "../session/status.ts";
+import { BdpError } from "../errors.ts";
 import { areaParam, READ_ONLY, targetParam } from "./common.ts";
-import { ok, run } from "./result.ts";
+import { ok, withBdp } from "./result.ts";
 
 const MESI = [
   "GENNAIO",
@@ -36,6 +36,19 @@ const distrettoParam = z
   .transform((value) => value.toUpperCase())
   .describe("Distretto di corte d'appello, per esempio BOLOGNA.");
 
+const upper = z
+  .string()
+  .trim()
+  .min(1)
+  .transform((value) => value.toUpperCase());
+
+/** A filter that matches nothing is a typo, not an empty district: say so instead of returning []. */
+const unknownDistrict = (distretto: string, known: Iterable<string>): BdpError =>
+  new BdpError(
+    "parametri",
+    `Distretto sconosciuto: ${distretto}. Distretti presenti: ${[...new Set(known)].sort((a, b) => a.localeCompare(b, "it")).join(", ")}.`,
+  );
+
 const counts = (rows: readonly { text: string; value: number }[]) =>
   rows.map(({ text, value }) => ({ voce: text === "" ? "(non indicata)" : text, conteggio: value }));
 
@@ -53,7 +66,7 @@ export const registerValueTools = (server: McpServer): void => {
       inputSchema: { campo: z.enum(LIST_KEYS), area: areaParam },
       annotations: READ_ONLY,
     },
-    ({ campo, area }) => run(async () => ok({ campo, valori: await listValues(await requireSession(), campo, area) })),
+    ({ campo, area }, { signal }) => withBdp(signal, async (ctx) => ok({ campo, valori: await listValues(ctx, campo, area) })),
   );
 
   server.registerTool(
@@ -65,10 +78,14 @@ export const registerValueTools = (server: McpServer): void => {
       inputSchema: { distretto: distrettoParam.optional() },
       annotations: READ_ONLY,
     },
-    ({ distretto }) =>
-      run(async () => {
+    ({ distretto }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const rows = await getGeografia(ctx);
+        if (distretto && !rows.some((r) => r.distretto === distretto)) {
+          throw unknownDistrict(distretto, rows.map((r) => r.distretto));
+        }
         const grouped = new Map<string, string[]>();
-        for (const row of await getGeografia(await requireSession())) {
+        for (const row of rows) {
           if (distretto && row.distretto !== distretto) continue;
           grouped.set(row.distretto, [...(grouped.get(row.distretto) ?? []), row.ufficio]);
         }
@@ -93,8 +110,8 @@ export const registerValueTools = (server: McpServer): void => {
       },
       annotations: READ_ONLY,
     },
-    ({ campo, testo, area }) =>
-      run(async () => ok({ campo, valori: await lookupValues(await requireSession(), campo, testo, area) })),
+    ({ campo, testo, area }, { signal }) =>
+      withBdp(signal, async (ctx) => ok({ campo, valori: await lookupValues(ctx, campo, testo, area) })),
   );
 
   server.registerTool(
@@ -105,8 +122,8 @@ export const registerValueTools = (server: McpServer): void => {
       inputSchema: { tipo: targetParam.default("provvedimenti"), area: areaParam },
       annotations: READ_ONLY,
     },
-    ({ tipo, area }) =>
-      run(async () => ok(counts(await getOccorrenze(await requireSession(), tipo, area, "parola_chiave")))),
+    ({ tipo, area }, { signal }) =>
+      withBdp(signal, async (ctx) => ok(counts(await getOccorrenze(ctx, tipo, area, "parola_chiave")))),
   );
 
   server.registerTool(
@@ -118,10 +135,11 @@ export const registerValueTools = (server: McpServer): void => {
       inputSchema: { distretto: distrettoParam.optional() },
       annotations: READ_ONLY,
     },
-    ({ distretto }) =>
-      run(async () => {
-        const rows = await getPubblicazioni(await requireSession());
+    ({ distretto }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const rows = await getPubblicazioni(ctx);
         if (distretto) {
+          if (!rows.some((r) => r.distretto === distretto)) throw unknownDistrict(distretto, rows.map((r) => r.distretto));
           return ok(
             rows
               .filter((r) => r.distretto === distretto)
@@ -149,16 +167,16 @@ export const registerValueTools = (server: McpServer): void => {
       inputSchema: {
         area: areaParam,
         distretto: distrettoParam.optional(),
-        ufficio: z.string().trim().min(1).optional(),
-        materia: z.string().trim().min(1).optional(),
+        ufficio: upper.optional().describe("Ufficio esatto, per esempio TRIBUNALE DI BOLOGNA."),
+        materia: upper.optional(),
         anno: z.number().int().min(1900).max(2100).optional(),
         mese: z.enum(MESI).optional(),
       },
       annotations: READ_ONLY,
     },
-    (params) =>
-      run(async () => {
-        const result = await getArchivio(await requireSession(), {
+    (params, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const result = await getArchivio(ctx, {
           area: params.area,
           distretto: params.distretto,
           ufficio: params.ufficio,
@@ -166,10 +184,14 @@ export const registerValueTools = (server: McpServer): void => {
           anno: params.anno === undefined ? undefined : String(params.anno),
           mese: params.mese,
         });
+        const empty = result.provvedimentoOccurrences.length === 0 && result.massimaOccurrences.length === 0;
         return ok({
           livello: archiveLevel(params),
           provvedimenti: counts(result.provvedimentoOccurrences),
           abstract: counts(result.massimaOccurrences),
+          ...(empty && (params.distretto || params.ufficio)
+            ? { nota: "Nessun conteggio: controlla distretto e ufficio con elenca_uffici." }
+            : {}),
         });
       }),
   );

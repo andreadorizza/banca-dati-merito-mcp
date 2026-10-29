@@ -55,12 +55,22 @@ J3A5yJDI+B7OIaUGJpVbiLpKW2h5QeZoyyEVZRvntpVXqYPLt+HYzhoOZ5G2F8eL
 
 const extraIntermediates: string[] = [TELECOM_ITALIA_OV_CA_2];
 
-export const caBundle = (): string[] => [...tls.rootCertificates, ...extraIntermediates];
+/**
+ * Node's default trust list, including NODE_EXTRA_CA_CERTS and, with
+ * --use-system-ca, the OS store (needed behind TLS-inspecting proxies).
+ * `getCACertificates` exists from Node 22.15; older 22.x fall back to the bundled roots.
+ */
+const trustedRoots = (): readonly string[] =>
+  typeof tls.getCACertificates === "function" ? tls.getCACertificates("default") : tls.rootCertificates;
+
+export const caBundle = (): string[] => [...trustedRoots(), ...extraIntermediates];
 
 export const isMissingIntermediateError = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE";
 
 const AIA_TIMEOUT_MS = 10_000;
+/** A certificate is a few kilobytes; the URL comes from an unverified peer, so cap what we read. */
+const AIA_MAX_BYTES = 64 * 1024;
 
 const fetchDer = (url: string): Promise<Buffer> =>
   new Promise((resolve, reject) => {
@@ -71,10 +81,20 @@ const fetchDer = (url: string): Promise<Buffer> =>
         return;
       }
       const chunks: Buffer[] = [];
-      res.on("data", (chunk: Buffer) => chunks.push(chunk));
+      let size = 0;
+      res.on("data", (chunk: Buffer) => {
+        size += chunk.length;
+        if (size > AIA_MAX_BYTES) {
+          req.destroy(new Error(`AIA ${url}: oltre ${AIA_MAX_BYTES} byte`));
+          return;
+        }
+        chunks.push(chunk);
+      });
       res.on("end", () => resolve(Buffer.concat(chunks)));
       res.on("error", reject);
     });
+    const deadline = setTimeout(() => req.destroy(new Error(`AIA ${url}: timeout`)), AIA_TIMEOUT_MS);
+    req.on("close", () => clearTimeout(deadline));
     req.on("timeout", () => req.destroy(new Error(`AIA ${url}: timeout`)));
     req.on("error", reject);
   });
@@ -100,7 +120,7 @@ const peerLeaf = (host: string): Promise<X509Certificate> =>
 const signedByTrustedRoot = (intermediate: X509Certificate): boolean =>
   intermediate.ca &&
   intermediate.issuer !== intermediate.subject &&
-  tls.rootCertificates.some((pem) => {
+  trustedRoots().some((pem) => {
     const root = new X509Certificate(pem);
     return intermediate.checkIssued(root) && intermediate.verify(root.publicKey);
   });
@@ -116,7 +136,8 @@ export const learnIntermediateFromAia = async (host: string): Promise<boolean> =
     ?.split("\n")
     .find((line) => line.startsWith("CA Issuers - URI:"))
     ?.slice("CA Issuers - URI:".length);
-  if (!url?.startsWith("http://") && !url?.startsWith("https://")) return false;
+  // CAs publish AIA certificates over plain HTTP; the signature check below is what makes them safe.
+  if (!url?.startsWith("http://")) return false;
 
   const intermediate = new X509Certificate(await fetchDer(url));
   if (!leaf.checkIssued(intermediate) || !leaf.verify(intermediate.publicKey)) return false;

@@ -3,9 +3,9 @@ import { z } from "zod";
 import { RESULT_WINDOW } from "../config.ts";
 import { searchAbstract, searchProvvedimenti, SORT_KEYS, suggest, type SearchParams } from "../bdp/client.ts";
 import { ABSTRACT_FIELDS, buildQuery, DATE_FIELDS, PROVVEDIMENTO_FIELDS, TEXT_MODES, type Target } from "../bdp/query.ts";
-import { requireSession } from "../session/status.ts";
+import { BdpError } from "../errors.ts";
 import { areaParam, formatEstremi, pagingParams, READ_ONLY, snippets, targetParam } from "./common.ts";
-import { ok, run } from "./result.ts";
+import { ok, run, withBdp } from "./result.ts";
 
 const criterion = <F extends readonly [string, ...string[]]>(fields: F) =>
   z.object({
@@ -14,7 +14,9 @@ const criterion = <F extends readonly [string, ...string[]]>(fields: F) =>
       .string()
       .trim()
       .min(1)
-      .describe("Valore esatto come lo usa la Banca Dati (ottienilo con `risolvi_criteri`)."),
+      .describe(
+        "Valore esatto come lo usa la Banca Dati (ottienilo con `risolvi_criteri`). Numeri e anni si scrivono senza zeri iniziali, per esempio numero_ruolo 2084.",
+      ),
   });
 
 const searchShape = <F extends readonly [string, ...string[]]>(fields: F) => ({
@@ -60,7 +62,7 @@ type SearchInput =
 
 const toSearchParams = (target: Target, input: SearchInput): SearchParams => {
   if (input.da + input.quanti > RESULT_WINDOW) {
-    throw new RangeError(`La Banca Dati mostra solo i primi ${RESULT_WINDOW} risultati: restringi la ricerca.`);
+    throw new BdpError("parametri", `La Banca Dati mostra solo i primi ${RESULT_WINDOW} risultati: restringi la ricerca.`);
   }
   return {
     area: input.area,
@@ -82,8 +84,19 @@ const pageSummary = (count: number, from: number, returned: number) => ({
   ...(from + returned < Math.min(count, RESULT_WINDOW) ? { prossimo_da: from + returned } : {}),
 });
 
-/** Autocomplete types that are not field criteria: full text and personal notes have their own parameters. */
-const NON_CRITERION_TYPES = new Set(["anonymized_testo", "testo", "note_personali"]);
+/**
+ * Autocomplete also suggests full text and personal notes, which have their own
+ * parameters; only fields the matching search accepts are passed on as criteria.
+ */
+const CRITERION_FIELDS = {
+  provvedimenti: new Set<string>(PROVVEDIMENTO_FIELDS),
+  abstract: new Set<string>(ABSTRACT_FIELDS),
+} as const satisfies Record<Target, ReadonlySet<string>>;
+
+const SEARCH_TOOL = { provvedimenti: "cerca_provvedimenti", abstract: "cerca_abstract" } as const satisfies Record<
+  Target,
+  string
+>;
 
 export const registerSearchTools = (server: McpServer): void => {
   server.registerTool(
@@ -99,18 +112,18 @@ export const registerSearchTools = (server: McpServer): void => {
       },
       annotations: READ_ONLY,
     },
-    ({ testo, tipo, area }) =>
-      run(async () => {
-        const suggestions = await suggest(await requireSession(), tipo, testo, area);
+    ({ testo, tipo, area }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const suggestions = await suggest(ctx, tipo, testo, area);
         const criteri = suggestions
-          .filter((s) => !NON_CRITERION_TYPES.has(s.type))
+          .filter((s) => CRITERION_FIELDS[tipo].has(s.type))
           .map((s) => ({ campo: s.type, valore: s.text, etichetta: s.label }));
         return ok({
           criteri,
           nota:
             criteri.length === 0
               ? "Nessun criterio corrispondente: usa il parametro `testo` della ricerca."
-              : "Passa i criteri scelti in `criteri` di cerca_provvedimenti o cerca_abstract, con lo stesso campo e valore.",
+              : `Passa i criteri scelti in \`criteri\` di ${SEARCH_TOOL[tipo]}, con lo stesso campo e valore.`,
         });
       }),
   );
@@ -124,10 +137,12 @@ export const registerSearchTools = (server: McpServer): void => {
       inputSchema: provvedimentiShape,
       annotations: READ_ONLY,
     },
-    (input) =>
+    (input, { signal }) =>
       run(async () => {
+        // Parameters are checked before the session, so a bad call never waits on BDP.
         const params = toSearchParams("provvedimenti", input);
-        const page = await searchProvvedimenti(await requireSession(), params);
+        return withBdp(signal, async (ctx) => {
+        const page = await searchProvvedimenti(ctx, params);
         return ok({
           ...pageSummary(page.count, input.da, page.items.length),
           risultati: page.items.map((item) => ({
@@ -149,6 +164,7 @@ export const registerSearchTools = (server: McpServer): void => {
             abstract: item.abstract ?? [],
           })),
         });
+        });
       }),
   );
 
@@ -161,10 +177,11 @@ export const registerSearchTools = (server: McpServer): void => {
       inputSchema: abstractShape,
       annotations: READ_ONLY,
     },
-    (input) =>
+    (input, { signal }) =>
       run(async () => {
         const params = toSearchParams("abstract", input);
-        const page = await searchAbstract(await requireSession(), params);
+        return withBdp(signal, async (ctx) => {
+        const page = await searchAbstract(ctx, params);
         return ok({
           ...pageSummary(page.count, input.da, page.items.length),
           risultati: page.items.map((item) => ({
@@ -185,6 +202,7 @@ export const registerSearchTools = (server: McpServer): void => {
             riferimenti_normativi: item.riferimento_normativo,
             estratti: snippets(item.estratto),
           })),
+        });
         });
       }),
   );

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { buildQuery, toBdpDate } from "../src/bdp/query.ts";
+import { BdpError } from "../src/errors.ts";
+
+const isParamError = (error: unknown): boolean => error instanceof BdpError && error.code === "parametri";
 
 describe("buildQuery", () => {
   it("joins criteria with AND, in BDP's field:\"value\" form", () => {
@@ -52,7 +55,14 @@ describe("buildQuery", () => {
   });
 
   it("rejects exclusions with nothing to exclude from", () => {
-    assert.throws(() => buildQuery("provvedimenti", { escludi: [{ campo: "materia", valore: "X" }] }), RangeError);
+    assert.throws(() => buildQuery("provvedimenti", { escludi: [{ campo: "materia", valore: "X" }] }), isParamError);
+  });
+
+  it("rejects an inverted date range instead of matching nothing", () => {
+    assert.throws(
+      () => buildQuery("provvedimenti", { date: { campo: "data", da: "2025-01-01", a: "2024-01-01" } }),
+      isParamError,
+    );
   });
 
   it("returns an empty query when there are no filters", () => {
@@ -63,8 +73,8 @@ describe("buildQuery", () => {
 
 describe("toBdpDate", () => {
   it("rejects malformed and impossible dates", () => {
-    assert.throws(() => toBdpDate("2024-1-5"), RangeError);
-    assert.throws(() => toBdpDate("2023-02-29"), RangeError);
-    assert.throws(() => toBdpDate("31/12/2024"), RangeError);
+    assert.throws(() => toBdpDate("2024-1-5"), isParamError);
+    assert.throws(() => toBdpDate("2023-02-29"), isParamError);
+    assert.throws(() => toBdpDate("31/12/2024"), isParamError);
   });
 });

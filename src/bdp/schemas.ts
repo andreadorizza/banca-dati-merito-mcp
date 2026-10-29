@@ -181,5 +181,24 @@ export const PubblicazioniSchema = z.array(
   }),
 );
 
-/** Saved searches: BDP stores whatever its front end sent, so the items stay open. */
-export const RicercheSalvateSchema = z.array(z.record(z.string(), z.unknown()));
+/**
+ * Saved searches. Unverified live (the sampled account had none): fields are those
+ * BDP's front end sends when saving, under both spellings it uses elsewhere. Only
+ * these are kept, so ownership data BDP may attach never reaches the model.
+ */
+export const RicercheSalvateSchema = z.array(
+  z.object({
+    id: text,
+    _id: text,
+    name: text,
+    query: text,
+    area: text,
+    collated: z.boolean().nullish(),
+    notePersonali: text,
+    note_personali: text,
+    sortField: text,
+    sort_field: text,
+    sortOrder: text,
+    sort_order: text,
+  }),
+);

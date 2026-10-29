@@ -10,6 +10,7 @@ export const BDP_ERROR_CODES = [
   "risposta_inattesa",
   "rete",
   "parametri",
+  "annullata",
 ] as const;
 
 export type BdpErrorCode = (typeof BDP_ERROR_CODES)[number];
@@ -35,6 +36,7 @@ const HINTS = {
     "La Banca Dati ha risposto in un formato diverso da quello atteso: probabilmente ha cambiato il suo funzionamento. Segnala il problema nel repository del progetto.",
   rete: "Controlla la connessione a internet e riprova.",
   parametri: "Correggi i parametri e riprova.",
+  annullata: "La richiesta è stata annullata dal client prima di completarsi.",
 } as const satisfies Record<BdpErrorCode, string>;
 
 export const hintFor = (code: BdpErrorCode): string => HINTS[code];

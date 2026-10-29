@@ -12,13 +12,11 @@ Uso:
   banca-dati-merito-mcp            avvia il server MCP (stdio), per i client MCP
   banca-dati-merito-mcp login      apre il browser per l'accesso (SPID, CIE, CNS, eIDAS)
   banca-dati-merito-mcp stato      controlla la sessione salvata
-  banca-dati-merito-mcp logout     cancella la sessione salvata
-  banca-dati-merito-mcp logout --profilo
-                                   cancella anche il profilo del browser dedicato
+  banca-dati-merito-mcp logout     cancella la sessione e il profilo del browser dedicato
 `;
 
 const main = async (args: string[]): Promise<void> => {
-  const [command, ...rest] = args;
+  const [command] = args;
   switch (command) {
     case undefined:
     case "serve": {
@@ -38,9 +36,11 @@ const main = async (args: string[]): Promise<void> => {
       return;
     }
     case "logout": {
+      // The browser profile holds BDP and identity-provider cookies too: keeping it
+      // would let the next login skip authentication.
       await clearSession();
-      if (rest.includes("--profilo")) await rm(browserProfileDir(), { recursive: true, force: true });
-      console.log("Sessione cancellata.");
+      await rm(browserProfileDir(), { recursive: true, force: true });
+      console.log("Sessione e profilo del browser cancellati.");
       return;
     }
     case "--help":

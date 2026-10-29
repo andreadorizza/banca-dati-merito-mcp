@@ -16,6 +16,10 @@ if [ "$version" != "$manifest_version" ] || [ "$version" != "$plugin_version" ];
   echo "versions differ: package.json $version, manifest.json $manifest_version, plugin.json $plugin_version" >&2
   exit 1
 fi
+if ! grep -q "banca-dati-merito-mcp@$version" README.md; then
+  echo "README.md does not pin banca-dati-merito-mcp@$version" >&2
+  exit 1
+fi
 
 cp -R dist manifest.json package.json package-lock.json LICENSE README.md "$stage/"
 cp assets/icon.png "$stage/icon.png"

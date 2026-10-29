@@ -12,9 +12,8 @@ import {
   getTestoProvvedimento,
   getTimeline,
 } from "../bdp/client.ts";
-import { requireSession } from "../session/status.ts";
 import { areaParam, formatEstremi, idParam, READ_ONLY, targetParam } from "./common.ts";
-import { ok, run } from "./result.ts";
+import { ok, withBdp } from "./result.ts";
 
 const DEFAULT_CHUNK = 20_000;
 const MAX_CHUNK = 60_000;
@@ -32,13 +31,20 @@ const estremi = (item: Parameters<typeof formatEstremi>[0] & Record<string, unkn
 const notFound = (what: string, id: string): BdpError =>
   new BdpError("parametri", `Nessun ${what} con id ${id} nella Banca Dati.`);
 
+/** Names Windows reserves for devices, whatever the extension. */
+const WINDOWS_RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)$/i;
+
 /** A file name a lawyer recognises, safe on every OS. */
-const safeFileName = (name: string): string =>
-  name
-    .normalize("NFKD")
-    .replace(/[^\w.\- ]+/g, "")
-    .replace(/\s+/g, "_")
-    .slice(0, 120) || "documento";
+export const safeFileName = (name: string): string => {
+  const cleaned =
+    name
+      .normalize("NFKD")
+      .replace(/[^\w.\- ]+/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/^\.+/, "")
+      .slice(0, 120) || "documento";
+  return WINDOWS_RESERVED.test(cleaned) ? `documento_${cleaned}` : cleaned;
+};
 
 const writeUnique = async (dir: string, base: string, data: Buffer): Promise<string> => {
   await mkdir(dir, { recursive: true });
@@ -72,12 +78,11 @@ export const registerReadTools = (server: McpServer): void => {
       },
       annotations: READ_ONLY,
     },
-    ({ id, includi_cartelle, area }) =>
-      run(async () => {
-        const session = await requireSession();
-        const item = await getProvvedimento(session, id, area);
+    ({ id, includi_cartelle, area }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const item = await getProvvedimento(ctx, id, area);
         if (!item) throw notFound("provvedimento", id);
-        const cartelle = includi_cartelle ? await getCartelleDelDocumento(session, "provvedimenti", id) : undefined;
+        const cartelle = includi_cartelle ? await getCartelleDelDocumento(ctx, "provvedimenti", id) : undefined;
         return ok({
           ...estremi(item),
           distretto: item.distretto,
@@ -118,9 +123,9 @@ export const registerReadTools = (server: McpServer): void => {
       },
       annotations: READ_ONLY,
     },
-    ({ id, da_carattere, max_caratteri }) =>
-      run(async () => {
-        const testo = await getTestoProvvedimento(await requireSession(), id);
+    ({ id, da_carattere, max_caratteri }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const testo = await getTestoProvvedimento(ctx, id);
         const end = Math.min(testo.length, da_carattere + max_caratteri);
         return ok({
           id,
@@ -150,12 +155,11 @@ export const registerReadTools = (server: McpServer): void => {
       },
       annotations: READ_ONLY,
     },
-    ({ id, includi_cartelle, area }) =>
-      run(async () => {
-        const session = await requireSession();
-        const item = await getAbstract(session, id, area);
+    ({ id, includi_cartelle, area }, { signal }) =>
+      withBdp(signal, async (ctx) => {
+        const item = await getAbstract(ctx, id, area);
         if (!item) throw notFound("abstract", id);
-        const cartelle = includi_cartelle ? await getCartelleDelDocumento(session, "abstract", id) : undefined;
+        const cartelle = includi_cartelle ? await getCartelleDelDocumento(ctx, "abstract", id) : undefined;
         const riferimento = (a: { id: string; titolo?: string | null | undefined } & Parameters<typeof estremi>[0]) => ({
           id: a.id,
           titolo: a.titolo,
@@ -191,14 +195,15 @@ export const registerReadTools = (server: McpServer): void => {
       inputSchema: { id: idParam },
       annotations: READ_ONLY,
     },
-    ({ id }) => run(async () => ok((await getTimeline(await requireSession(), id)).map(estremi))),
+    ({ id }, { signal }) => withBdp(signal, async (ctx) => ok((await getTimeline(ctx, id)).map(estremi))),
   );
 
   server.registerTool(
     "scarica_documento",
     {
       title: "Scarica documento",
-      description: `Salva il PDF di un provvedimento o di un abstract nella cartella di download configurata (predefinita: ${downloadDir()}) e restituisce il percorso del file. Non sovrascrive file esistenti. Per leggere il contenuto usa leggi_testo_provvedimento o leggi_abstract.`,
+      description:
+        "Salva il PDF di un provvedimento o di un abstract nella cartella di download configurata dall'utente (predefinita: Download/banca-dati-merito) e restituisce il percorso del file. Non sovrascrive file esistenti. La Banca Dati può impiegare oltre mezzo minuto a generare il PDF. Per leggere il contenuto usa leggi_testo_provvedimento o leggi_abstract.",
       inputSchema: {
         tipo: targetParam,
         id: idParam,
@@ -213,7 +218,7 @@ export const registerReadTools = (server: McpServer): void => {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
     },
     ({ tipo, id, nome_file }, extra) =>
-      run(async () => {
+      withBdp(extra.signal, async (ctx) => {
         // BDP builds PDFs slowly; progress lets clients that support it extend their timeout.
         const progressToken = extra._meta?.progressToken;
         let lastSent = 0;
@@ -230,7 +235,9 @@ export const registerReadTools = (server: McpServer): void => {
                   })
                   .catch(() => undefined);
               };
-        const pdf = await getDocumento(await requireSession(), tipo, id, onProgress);
+        const pdf = await getDocumento(ctx, tipo, id, onProgress);
+        // The client gave up and told the model the call failed: a file now would be an orphan.
+        if (extra.signal.aborted) throw new BdpError("annullata", "Scaricamento annullato.");
         const path = await writeUnique(downloadDir(), safeFileName(nome_file ?? `${tipo}-${id.slice(0, 16)}`), pdf);
         return ok({ salvato_in: path, byte: pdf.length });
       }),
