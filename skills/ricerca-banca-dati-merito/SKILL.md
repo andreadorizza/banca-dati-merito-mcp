@@ -9,7 +9,20 @@ La Banca Dati di Merito (BDP) raccoglie i provvedimenti civili dei tribunali e d
 corti d'appello, pseudonimizzati, e gli abstract che ne sintetizzano i principi. Gli
 strumenti del server `banca-dati-merito` la interrogano con la sessione dell'utente.
 
-## Prima di tutto: la sessione
+## Prima di tutto: gli strumenti ci sono?
+
+Il server gira solo sul computer dell'utente, perché la sessione con la BDP non deve
+uscirne. Funziona nell'app desktop di Claude con l'estensione installata, in Claude Code
+con il plugin e negli altri client MCP locali; non funziona in claude.ai dal browser né
+nelle app per smartphone.
+
+Se gli strumenti del server (`stato_sessione`, `cerca_provvedimenti` e gli altri) non
+sono disponibili, non cercarli tra i connettori e non provare altre strade: dillo subito
+all'utente, spiegando che deve aprire la conversazione nell'app desktop di Claude, con
+l'estensione Banca Dati di Merito installata, oppure usare Claude Code. Non inventare
+risultati.
+
+## Poi: la sessione
 
 1. Chiama `stato_sessione`.
 2. Se è `assente` o `scaduta`, chiama `accedi`: si apre una finestra del browser in cui

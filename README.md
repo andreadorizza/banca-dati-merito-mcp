@@ -38,6 +38,21 @@ citazione ([`skills/ricerca-banca-dati-merito`](skills/ricerca-banca-dati-merito
 - Node.js 22 o successivo, solo per Claude Code e gli altri client (Claude Desktop ha
   già il suo).
 
+## Dove funziona
+
+Il server gira **sul tuo computer**, perché la sessione con la Banca Dati non deve
+uscirne ([ADR 0001](docs/adr/0001-sessione-solo-locale.md)). Per questo funziona solo nei
+client che avviano programmi locali:
+
+| Funziona | Non funziona |
+|---|---|
+| App desktop di Claude (estensione `.mcpb`) | claude.ai dal browser, app di Claude per smartphone |
+| Claude Code (plugin) | ChatGPT (browser, smartphone e chat dell'app desktop) |
+| Cursor, Windsurf, Zed, Codex e altri client MCP locali | |
+
+Nei client che accettano solo server remoti l'unico modo sarebbe esporre il server su
+internet, e con lui la tua sessione: non farlo.
+
 ## Installazione
 
 ### Claude Desktop
@@ -70,6 +85,15 @@ Aggiungi il server alla configurazione del client (Cursor, Windsurf, Zed, ecc.):
   }
 }
 ```
+
+Per Codex di OpenAI:
+
+```
+codex mcp add banca-dati-merito -- npx -y banca-dati-merito-mcp@0.1.1
+```
+
+La skill di ricerca è specifica di Claude; negli altri client restano gli strumenti e le
+regole che il server stesso invia al modello.
 
 ## Accesso
 
